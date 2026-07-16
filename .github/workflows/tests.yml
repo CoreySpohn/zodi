@@ -1,0 +1,45 @@
+name: Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Test [${{ matrix.extras }}] py${{ matrix.python-version }} on ${{ matrix.platform }}
+    runs-on: ${{ matrix.platform }}
+    strategy:
+      matrix:
+        python-version: ["3.12"]
+        platform: [ubuntu-latest, macos-latest]
+        extras: ["test", "test,jax"]
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v7
+      with:
+        enable-cache: true
+
+    - name: Create venv
+      run: uv venv .venv --python ${{ matrix.python-version }}
+
+    - name: Install package with test dependencies
+      run: uv pip install -e ".[${{ matrix.extras }}]"
+      env:
+        VIRTUAL_ENV: ${{ github.workspace }}/.venv
+
+    # The core leg is the product guarantee: numpy consumers never
+    # inherit jax through this package.
+    - name: Prove the core install carries no jax
+      if: matrix.extras == 'test'
+      run: .venv/bin/python -c "import importlib.util; assert importlib.util.find_spec('jax') is None"
+
+    - name: Diag imports
+      run: .venv/bin/python -c "import zodi; from zodi._interp import interp2d_bilinear_clamped; print('zodi import ok')"
+
+    - name: Run tests
+      run: .venv/bin/pytest tests/ -v --tb=short
