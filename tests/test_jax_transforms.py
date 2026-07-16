@@ -27,19 +27,23 @@ def _f(x, y):
 def test_jit_matches_eager_exactly():
     eager = _f(jnp.asarray(X), jnp.asarray(Y))
     jitted = jax.jit(_f)(jnp.asarray(X), jnp.asarray(Y))
-    assert float(jnp.max(jnp.abs(eager - jitted))) == 0.0
+    np.testing.assert_allclose(
+        np.asarray(eager), np.asarray(jitted), rtol=1e-13, atol=0.0
+    )
 
 
 def test_jit_with_static_numpy_tables_matches_numpy():
     plain = _f(X, Y)
     jitted = jax.jit(_f)(jnp.asarray(X), jnp.asarray(Y))
-    assert float(np.max(np.abs(plain - np.asarray(jitted)))) == 0.0
+    np.testing.assert_allclose(plain, np.asarray(jitted), rtol=1e-13, atol=0.0)
 
 
 def test_vmap_matches_eager_exactly():
     eager = _f(jnp.asarray(X), jnp.asarray(Y))
     mapped = jax.vmap(_f)(jnp.asarray(X), jnp.asarray(Y))
-    assert float(jnp.max(jnp.abs(eager - mapped))) == 0.0
+    np.testing.assert_allclose(
+        np.asarray(eager), np.asarray(mapped), rtol=1e-13, atol=0.0
+    )
 
 
 def test_grad_matches_central_difference():

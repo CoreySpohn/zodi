@@ -19,6 +19,12 @@ _NUMPY_XP = array_api_compat.array_namespace(np.asarray(0.0))
 def array_namespace(*args):
     """Return the array API namespace shared by the array arguments.
 
+    numpy arrays are treated as backend-neutral static data: when the
+    arguments mix numpy arrays with arrays from one other backend (for
+    example a numpy wavelength grid alongside jax spectra), the other
+    backend wins and the numpy inputs are lifted into it with ``asarray``
+    by the caller. Arrays from two non-numpy backends still raise.
+
     Args:
         *args: Candidate inputs; anything with a ``shape`` attribute is
             treated as an array, and plain Python scalars are ignored.
@@ -30,4 +36,10 @@ def array_namespace(*args):
     arrays = [a for a in args if hasattr(a, "shape")]
     if not arrays:
         return _NUMPY_XP
-    return array_api_compat.array_namespace(*arrays)
+    try:
+        return array_api_compat.array_namespace(*arrays)
+    except TypeError:
+        foreign = [a for a in arrays if not isinstance(a, (np.ndarray, np.generic))]
+        if not foreign:
+            raise
+        return array_api_compat.array_namespace(*foreign)

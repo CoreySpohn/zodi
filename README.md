@@ -3,19 +3,40 @@
 Zodiacal and exozodiacal light brightness conventions for exoplanet imaging,
 from a single source that runs on numpy and JAX.
 
-Status: pre-release scaffold; the public physics API lands with v0.1.
+Status: v0.1 core (pre-PyPI). The LBTI HOSTS population distributions land
+next.
 
-## What it will own
+## What it owns
 
-- Local zodiacal light surface brightness (Leinert et al. 1998 tables, plus
-  the fixed-V-band variant used by yield codes).
-- Exozodi conventions: the one-zodi definition, n-zodi scaling, and radial
-  and latitudinal factors.
-- The LBTI HOSTS survey n-zodi population distributions, exposed as quantile
-  functions so callers supply their own uniform draws.
-- Unit conversions between the dialects in common use: magnitudes per square
-  arcsecond, flux ratio per square arcsecond, spectral radiance, and photon
-  rates.
+- Local zodiacal light surface brightness: the Leinert et al. (1998)
+  Table 17 position dependence and Table 19 wavelength dependence, with the
+  interpolation, anchoring, and near-Sun conventions of the production
+  codes stated explicitly (`zodi.specific_intensity`, `zodi.zodi_flux_ratio`).
+- The exozodi chain of Stark et al. (2014) as implemented by EXOSIMS
+  (`zodi.exozodi_flux_ratio_v`, `zodi.jez0`, `zodi.scale_jez`), the three
+  published latitudinal models (`zodi.latitudinal_factor`), and the
+  grey-scatterer band correction in both production flavors: the
+  stellar-color scaling used by pyEDITH (`zodi.exozodi_flux_ratio_band`)
+  and the scattered-plus-thermal spectrum model used by EXOSIMS, with its
+  calibration as a closed-form least-squares fit
+  (`zodi.fit_grey_scatter_constants`).
+- Unit conversions between the dialects in common use: magnitudes per
+  square arcsecond, flux ratio per square arcsecond, spectral radiance,
+  photon rates, and MJy per steradian (`zodi.units`).
+
+Coming next: the LBTI HOSTS survey n-zodi population distributions as
+quantile functions (callers supply their own uniform draws).
+
+## Documentation and validation
+
+`docs/conventions.md` states every model, constant, and known cross-code
+difference with sources and measured deltas; `docs/validation.md` maps
+each claim to an executable check. Cross-validation scripts against
+EXOSIMS, skyscapes, and zodipy live in `scripts/` and are runnable by
+anyone with those packages installed. Current results: exact agreement
+with the EXOSIMS closed-form models and magnitude chain, float64
+round-off agreement with skyscapes, and 0.95-1.23 brightness ratios
+against the independent Kelsall model at 1.25 um.
 
 ## Design
 

@@ -53,10 +53,12 @@ def test_interp2d_clamps_to_edges(xp):
     np.testing.assert_allclose(np.asarray(got), expected, atol=1e-14)
 
 
-def test_backends_agree_exactly():
+def test_backends_agree_to_roundoff():
     jnp = pytest.importorskip("jax.numpy")
     b_np = interp2d_bilinear_clamped(XG, YG, TABLE, X_QUERIES, Y_QUERIES)
     b_jax = interp2d_bilinear_clamped(
         XG, YG, TABLE, jnp.asarray(X_QUERIES), jnp.asarray(Y_QUERIES)
     )
-    assert float(np.max(np.abs(b_np - np.asarray(b_jax)))) == 0.0
+    # XLA may contract the bilinear multiply-adds into fmas, so agreement
+    # is to round-off rather than bit-exact on every platform
+    np.testing.assert_allclose(b_np, np.asarray(b_jax), rtol=1e-13, atol=0.0)
