@@ -14,6 +14,7 @@ dialects in use across codes (``zodi.units``). Geometry, star catalogs,
 spectra, and bandpasses are caller inputs, never package state.
 """
 
+from zodi._version import __version__
 from zodi.exozodi import (
     MAG_1ZODI_V_ARCSEC2,
     MV_SUN,
@@ -42,6 +43,7 @@ __all__ = [
     "MAG_1ZODI_V_ARCSEC2",
     "MV_SUN",
     "T_DUST_K",
+    "__version__",
     "band_average",
     "blackbody_spectral_radiance",
     "color_correction",

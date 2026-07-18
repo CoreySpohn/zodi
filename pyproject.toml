@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "zodi"
-version = "0.0.1"
+dynamic = ["version"]
 description = "Zodiacal and exozodiacal light brightness conventions with a single-source numpy/JAX core"
 authors = [{ name = "Corey Spohn", email = "corey.a.spohn@nasa.gov" }]
 readme = "README.md"
@@ -36,6 +36,12 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["D"]
+
+[tool.hatch.version]
+source = "vcs"
+
+[tool.hatch.build.hooks.vcs]
+version-file = "src/zodi/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zodi"]
