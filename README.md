@@ -25,6 +25,7 @@ from a single source that runs on numpy and JAX.
 
 ## Documentation and evidence
 
+Documentation is at [zodi.readthedocs.io](https://zodi.readthedocs.io).
 `docs/conventions.md` states every model, constant, and known cross-code
 difference with sources and measured deltas; `docs/evidence.md` maps
 each claim to an executable check and its kind of evidence. Cross-code
@@ -63,8 +64,13 @@ reflected-light brightness conventions used in exoplanet direct imaging.
 
 ## Install
 
-PyPI release pending; for now:
+```
+pip install zodi
+```
+
+The hard dependencies are `numpy` and `array-api-compat`. To run the JAX
+side of the test suite, install the extras:
 
 ```
-pip install git+https://github.com/CoreySpohn/zodi.git
+pip install "zodi[jax,test]"
 ```
