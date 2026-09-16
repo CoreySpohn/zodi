@@ -1,4 +1,4 @@
-"""Cross-model validation of zodi against zodipy (Kelsall 1998 DIRBE model).
+"""Cross-code benchmark of zodi against zodipy (Kelsall 1998 DIRBE model).
 
 zodipy implements an INDEPENDENT interplanetary dust model (Kelsall et
 al. 1998, fit to COBE/DIRBE) with an independent codebase, which makes it
@@ -10,7 +10,7 @@ scattered-light bands (1.25 and 2.2 um); the Kelsall model does not extend
 to V band, and the backscatter/thermal regions (anti-solar point, 2.2 um)
 are where the two models genuinely diverge.
 
-zodipy pins numpy below 2, so this validation runs as two processes with a
+zodipy pins numpy below 2, so this benchmark runs as two processes with a
 JSON handoff:
 
     python validate_against_zodipy.py zodi > /tmp/zodi_rows.json

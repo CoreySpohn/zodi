@@ -1,4 +1,4 @@
-"""Cross-validation of zodi against the EXOSIMS ZodiacalLight prototype.
+"""Cross-code benchmark of zodi against the EXOSIMS ZodiacalLight prototype.
 
 Runs EXOSIMS as the reference implementation and reports, for each shared
 quantity, the maximum relative difference over a test grid. Differences

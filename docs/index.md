@@ -12,12 +12,12 @@ star properties, spectra, and bandpasses are always caller inputs.
 
 Start with the [conventions](conventions.md) page: it states every
 model, constant, and known cross-code difference, with sources and
-measured deltas. The [validation](validation.md) page maps each claim
-to an executable check.
+measured deltas. The [evidence](evidence.md) page maps each claim
+to an executable check and the kind of evidence it provides.
 
 ```{toctree}
 :maxdepth: 1
 
 conventions
-validation
+evidence
 ```

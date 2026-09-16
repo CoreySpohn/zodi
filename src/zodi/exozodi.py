@@ -60,6 +60,7 @@ from zodi._xp import array_namespace
 
 __all__ = [
     "MAG_1ZODI_V_ARCSEC2",
+    "MAX_WAVELENGTH_UM",
     "MV_SUN",
     "T_DUST_K",
     "band_average",
@@ -81,9 +82,29 @@ MAG_1ZODI_V_ARCSEC2 = 22.0
 # Local zodi dust temperature reported by Leinert et al. (1998).
 T_DUST_K = 261.5
 
+# Wavelength arguments in this module are in um. A value above this bound is
+# almost certainly a nm value passed by mistake (the zodi and units modules
+# take nm), since the Leinert Table 19 spectrum ends at 140 um.
+MAX_WAVELENGTH_UM = 200.0
+
 _C_M_PER_S = 299792458.0
 _H_J_S = 6.62607015e-34
 _KB_J_PER_K = 1.380649e-23
+
+
+def _check_wavelength_um(xp, wavelength_um):
+    """Reject a um wavelength argument that looks like nm.
+
+    Only concrete numpy inputs are checked; JAX inputs (which may be
+    tracers under ``jit``) pass through unchecked.
+    """
+    if xp is not array_namespace():
+        return
+    if np.nanmax(np.asarray(wavelength_um)) > MAX_WAVELENGTH_UM:
+        raise ValueError(
+            f"wavelength_um exceeds {MAX_WAVELENGTH_UM} um; exozodi functions take "
+            "um (the zodi and units modules take nm)"
+        )
 
 
 def exozodi_flux_ratio_v(
@@ -239,6 +260,7 @@ def blackbody_spectral_radiance(wavelength_um, temperature_k):
         Spectral radiance in W m-2 sr-1 um-1.
     """
     xp = array_namespace(wavelength_um, temperature_k)
+    _check_wavelength_um(xp, wavelength_um)
     lam_m = xp.asarray(wavelength_um) * 1e-6
     t = xp.asarray(temperature_k)
     exponent = _H_J_S * _C_M_PER_S / (lam_m * _KB_J_PER_K * t)
@@ -280,6 +302,7 @@ def grey_scatter_intensity(
         units set by the calibration of the two constants.
     """
     xp = array_namespace(wavelength_um, star_flux)
+    _check_wavelength_um(xp, wavelength_um)
     lam = xp.asarray(wavelength_um)
     scattered = xp.asarray(star_flux) * xp.where(lam <= scatter_cutoff_um, 1.0, 0.0)
     thermal = blackbody_spectral_radiance(lam, t_dust_k)
@@ -315,6 +338,7 @@ def fit_grey_scatter_constants(
         Tuple ``(f_star, f_thermal)``.
     """
     xp = array_namespace(wavelength_um, star_flux, target_intensity)
+    _check_wavelength_um(xp, wavelength_um)
     lam = xp.asarray(wavelength_um)
     s = xp.asarray(star_flux) * xp.where(lam <= scatter_cutoff_um, 1.0, 0.0)
     b = blackbody_spectral_radiance(lam, t_dust_k)
@@ -348,6 +372,7 @@ def band_average(wavelength_um, values, throughput):
         The band-averaged value.
     """
     xp = array_namespace(wavelength_um, values, throughput)
+    _check_wavelength_um(xp, wavelength_um)
     lam = xp.asarray(wavelength_um)
     weighted = xp.asarray(values) * xp.asarray(throughput)
     numerator = _trapezoid(xp, weighted, lam)

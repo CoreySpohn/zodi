@@ -29,11 +29,12 @@ next.
 Coming next: the LBTI HOSTS survey n-zodi population distributions as
 quantile functions (callers supply their own uniform draws).
 
-## Documentation and validation
+## Documentation and evidence
 
 `docs/conventions.md` states every model, constant, and known cross-code
-difference with sources and measured deltas; `docs/validation.md` maps
-each claim to an executable check. Cross-validation scripts against
+difference with sources and measured deltas; `docs/evidence.md` maps
+each claim to an executable check and its kind of evidence. Cross-code
+benchmark scripts against
 EXOSIMS, skyscapes, and zodipy live in `scripts/` and are runnable by
 anyone with those packages installed. Current results: exact agreement
 with the EXOSIMS closed-form models and magnitude chain, float64

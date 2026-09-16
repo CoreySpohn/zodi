@@ -1,4 +1,4 @@
-"""Cross-validation of zodi against skyscapes.background.leinert.
+"""Cross-code benchmark of zodi against skyscapes.background.leinert.
 
 skyscapes carries a JAX implementation of the same Leinert tables with the
 same piecewise-linear interpolation conventions, anchored on Table 19 with

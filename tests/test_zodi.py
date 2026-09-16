@@ -31,6 +31,43 @@ def test_position_factor_symmetry_and_clamping():
     )
 
 
+def test_clamp_contract_matches_nearest_tabulated_cell():
+    """Out-of-grid queries return the nearest tabulated cell.
+
+    Expected values come from the raw Table 17 and Table 19 arrays, not
+    from the interpolator. Tolerance basis: exact-algebra (a clamped
+    bilinear query on a node reproduces the node).
+    """
+    lon = list(tables.LON_GRID_DEG)
+    beta = list(tables.BETA_GRID_DEG)
+    ref = tables.TABLE17_REFERENCE
+    # latitude beyond the pole clamps to 90 deg
+    np.testing.assert_allclose(
+        zodi.position_factor(60.0, 95.0),
+        tables.TABLE17_RAW[lon.index(60.0), beta.index(90.0)] / ref,
+        rtol=1e-14,
+    )
+    # longitude difference beyond 180 deg clamps to the 180 deg row
+    np.testing.assert_allclose(
+        zodi.position_factor(200.0, 30.0),
+        tables.TABLE17_RAW[lon.index(180.0), beta.index(30.0)] / ref,
+        rtol=1e-14,
+    )
+    # near-Sun exclusion cell takes the first valid entry along its row
+    row = tables.TABLE17_RAW[lon.index(5.0)]
+    first_valid = row[np.isfinite(row)][0]
+    np.testing.assert_allclose(
+        zodi.position_factor(5.0, 0.0), first_valid / ref, rtol=1e-14
+    )
+    # wavelengths outside Table 19 clamp to the end knots (0.2 and 140 um)
+    np.testing.assert_allclose(
+        zodi.color_correction(100.0), zodi.color_correction(200.0), rtol=1e-14
+    )
+    np.testing.assert_allclose(
+        zodi.color_correction(2.0e5), zodi.color_correction(1.4e5), rtol=1e-14
+    )
+
+
 def test_specific_intensity_at_location_absolute_units():
     got = zodi.specific_intensity_at_location(90.0, 0.0)
     np.testing.assert_allclose(got, 259e-8, rtol=1e-14)

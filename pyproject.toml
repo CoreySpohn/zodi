@@ -25,7 +25,7 @@ Repository = "https://github.com/CoreySpohn/zodi"
 [project.optional-dependencies]
 jax = ["jax>=0.4.32", "jaxlib>=0.4.32"]
 dev = ["pre-commit"]
-test = ["pytest", "hypothesis"]
+test = ["pytest", "hypothesis", "ineedvalidation>=1.0"]
 docs = ["myst-nb", "sphinx-autoapi", "sphinx-book-theme"]
 
 [tool.ruff.lint]
@@ -45,3 +45,22 @@ version-file = "src/zodi/_version.py"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/zodi"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+# Verification and validation evidence, collected by the ineedvalidation
+# pytest plugin (run with --vv-evidence PATH to write the ledger). Each prefix
+# says which physical case a test attests and what kind of evidence it
+# produces; explicit @vv.case markers override these defaults.
+[tool.ineedvalidation]
+library = "zodi"
+
+[tool.ineedvalidation.defaults]
+"tests/test_zodi.py" = { case = "local-zodi", evidence = "code-verification" }
+"tests/test_tables.py" = { case = "local-zodi", evidence = "code-verification" }
+"tests/test_interp.py" = { case = "local-zodi", evidence = "code-verification" }
+"tests/test_units.py" = { case = "zodi-units", evidence = "code-verification" }
+"tests/test_exozodi.py" = { case = "exozodi-conventions", evidence = "code-verification" }
+"tests/test_jax_transforms.py" = { case = "local-zodi", evidence = "code-verification" }
+"tests/test_xp_dispatch.py" = { case = "local-zodi", evidence = "code-verification" }

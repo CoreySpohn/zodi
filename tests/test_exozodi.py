@@ -1,5 +1,6 @@
 """Exozodi chain: magnitude scalings, latitudinal models, grey-scatter fit."""
 
+import ineedvalidation as vv
 import numpy as np
 import pytest
 
@@ -23,9 +24,19 @@ class TestFluxRatioV:
             exozodi.exozodi_flux_ratio_v(3.0, 4.83, 1.0), 3.0 * base, rtol=1e-12
         )
 
+    @vv.case(
+        "exozodi-conventions",
+        "code-verification",
+        srq="exozodi surface brightness versus stellar type and separation",
+    )
     def test_reduces_to_stark_c4_at_the_eeid(self):
-        # Stark et al. (2014) Eq. C4: at r = sqrt(L) AU the surface
-        # brightness is 10**(-0.4 dMV) * (1/L) * 10**(-0.4 x).
+        """Stark et al. (2014) Eq. C4 at the EEID.
+
+        At r = sqrt(L) AU the surface brightness is
+        10**(-0.4 dMV) * (1/L) * 10**(-0.4 x), typed here from the paper.
+        Tolerance basis: exact-algebra (the two sides differ only by
+        floating-point evaluation order).
+        """
         mv = np.array([3.5, 4.83, 6.2, 10.4])
         lum = np.array([3.0, 1.0, 0.3, 0.02])
         c4 = 10.0 ** (-0.4 * (mv - 4.83)) * 10.0**-8.8 / lum
@@ -170,6 +181,20 @@ class TestBandAverage:
         np.testing.assert_allclose(got, 3.0 * 0.55 + 1.0, rtol=1e-12)
 
 
+class TestWavelengthUnitGuard:
+    def test_nm_value_into_um_argument_raises(self):
+        lam_nm = np.linspace(400.0, 900.0, 11)
+        with pytest.raises(ValueError, match="um"):
+            exozodi.blackbody_spectral_radiance(lam_nm, 261.5)
+        with pytest.raises(ValueError, match="um"):
+            exozodi.band_average(lam_nm, np.ones(11), np.ones(11))
+
+    def test_um_values_pass(self):
+        lam_um = np.linspace(0.4, 0.9, 11)
+        got = exozodi.band_average(lam_um, np.ones(11), np.ones(11))
+        np.testing.assert_allclose(got, 1.0, rtol=1e-12)
+
+
 class TestJez:
     def test_jez0_composition(self):
         got = exozodi.jez0(1e10, 4.83, 1.0, 1.0, 100.0)
@@ -188,9 +213,20 @@ class TestJez:
         got = exozodi.scale_jez(ref, 2.0, np.sqrt(lum), 0.7, lum)
         np.testing.assert_allclose(got, ref * 2.0 * 0.7, rtol=1e-12)
 
+    @vv.case(
+        "exozodi-conventions",
+        "code-verification",
+        srq="exozodi surface brightness versus stellar type and separation",
+    )
     def test_chain_matches_flux_ratio_and_is_luminosity_free(self):
-        # jez0 -> scale_jez must equal the general-radius V-band chain times
-        # F0 * f_lambda * bandwidth * fbeta, for any bolometric luminosity.
+        """The cached-intensity chain equals the general-radius chain.
+
+        jez0 -> scale_jez must equal the V-band flux ratio times
+        F0 * f_lambda * bandwidth * fbeta for any bolometric luminosity,
+        i.e. the 1/L in jez0 cancels against (EEID / r)**2. A chain that
+        double counts the luminosity fails by a factor L (0.02 to 3 here).
+        Tolerance basis: exact-algebra.
+        """
         f0, flam, bw, fbeta, nz = 1e10, 1.3, 100.0, 0.6, 3.0
         mv = np.array([3.5, 6.2, 10.4])
         lum = np.array([3.0, 0.3, 0.02])
