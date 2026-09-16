@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.0.0](https://github.com/CoreySpohn/zodi/compare/v0.1.0...v1.0.0) (2026-09-16)
+
+
+### ⚠ BREAKING CHANGES
+
+* measure exozodi radial scaling from the EEID to remove the luminosity double count
+
+### Features
+
+* tag tests with ineedvalidation evidence, pin the clamp contract, and guard um wavelength arguments against nm values ([50de1ce](https://github.com/CoreySpohn/zodi/commit/50de1cebc5f8029cbfab76c601efcdc0491f801f))
+
+
+### Bug Fixes
+
+* measure exozodi radial scaling from the EEID to remove the luminosity double count ([ddc2c07](https://github.com/CoreySpohn/zodi/commit/ddc2c07bdb18c5ea58fc80ce2f3fe5c1de67a223))
+
 ## 0.1.0 (2026-07-18)
 
 
