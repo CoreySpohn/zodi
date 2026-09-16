@@ -3,9 +3,6 @@
 Zodiacal and exozodiacal light brightness conventions for exoplanet imaging,
 from a single source that runs on numpy and JAX.
 
-Status: v0.1 core (pre-PyPI). The LBTI HOSTS population distributions land
-next.
-
 ## What it owns
 
 - Local zodiacal light surface brightness: the Leinert et al. (1998)
@@ -15,8 +12,8 @@ next.
 - The exozodi chain of Stark et al. (2014), anchored at the EEID and
   numerically compatible with EXOSIMS `calc_JEZ0`, with the radial scaling
   measured from the EEID (`zodi.exozodi_flux_ratio_v`, `zodi.jez0`,
-  `zodi.scale_jez`), the three
-  published latitudinal models (`zodi.latitudinal_factor`), and the
+  `zodi.scale_jez`), the three published latitudinal models
+  (`zodi.latitudinal_factor`), and the
   grey-scatterer band correction in both production flavors: the
   stellar-color scaling used by pyEDITH (`zodi.exozodi_flux_ratio_band`)
   and the scattered-plus-thermal spectrum model used by EXOSIMS, with its
@@ -25,9 +22,6 @@ next.
 - Unit conversions between the dialects in common use: magnitudes per
   square arcsecond, flux ratio per square arcsecond, spectral radiance,
   photon rates, and MJy per steradian (`zodi.units`).
-
-Coming next: the LBTI HOSTS survey n-zodi population distributions as
-quantile functions (callers supply their own uniform draws).
 
 ## Documentation and evidence
 
