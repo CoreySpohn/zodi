@@ -50,9 +50,9 @@ the JAX side. JAX users should enable float64:
 jax.config.update("jax_enable_x64", True)
 ```
 
-Random sampling is deliberately absent from the library: distributions ship
-as quantile functions (inverse CDFs), and callers bring uniforms from their
-own generator, whether that is `numpy.random` or `jax.random`.
+Random sampling is deliberately absent from the library: any distribution
+it exposes is a quantile function (inverse CDF), and callers bring uniforms
+from their own generator, whether that is `numpy.random` or `jax.random`.
 
 ## Not this library
 

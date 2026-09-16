@@ -21,6 +21,7 @@ dependencies = ["array-api-compat>=1.9", "numpy"]
 
 [project.urls]
 Repository = "https://github.com/CoreySpohn/zodi"
+Documentation = "https://zodi.readthedocs.io"
 
 [project.optional-dependencies]
 jax = ["jax>=0.4.32", "jaxlib>=0.4.32"]

@@ -18,8 +18,9 @@ The library owns *conventions*, not scenes or catalogs:
 
 Geometry (look vectors, helio-ecliptic angles), star properties
 (magnitudes, luminosities, spectra), and bandpasses are always caller
-inputs. The package never generates random numbers: population
-distributions ship as quantile functions and callers supply uniforms.
+inputs. The package never generates random numbers: any population
+distribution it exposes is a quantile function, and callers supply
+uniforms.
 
 Every function runs on numpy or JAX arrays from one source
 (`zodi._xp`): numpy inputs run pure numpy, JAX inputs trace natively
