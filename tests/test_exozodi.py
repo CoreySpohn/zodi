@@ -8,23 +8,34 @@ from zodi import exozodi
 
 class TestFluxRatioV:
     def test_solar_twin_at_one_zodi_is_the_definition(self):
-        got = exozodi.exozodi_flux_ratio_v(1.0, 4.83, 1.0, 1.0)
+        got = exozodi.exozodi_flux_ratio_v(1.0, 4.83, 1.0)
         np.testing.assert_allclose(got, 10.0**-8.8, rtol=1e-12)
 
-    def test_magnitude_luminosity_radius_scalings(self):
-        base = exozodi.exozodi_flux_ratio_v(1.0, 4.83, 1.0, 1.0)
+    def test_magnitude_radius_and_zodi_scalings(self):
+        base = exozodi.exozodi_flux_ratio_v(1.0, 4.83, 1.0)
         np.testing.assert_allclose(
-            exozodi.exozodi_flux_ratio_v(1.0, 7.33, 1.0, 1.0), base / 10.0, rtol=1e-12
+            exozodi.exozodi_flux_ratio_v(1.0, 7.33, 1.0), base / 10.0, rtol=1e-12
         )
         np.testing.assert_allclose(
-            exozodi.exozodi_flux_ratio_v(1.0, 4.83, 4.0, 1.0), base / 4.0, rtol=1e-12
+            exozodi.exozodi_flux_ratio_v(1.0, 4.83, 2.0), base / 4.0, rtol=1e-12
         )
         np.testing.assert_allclose(
-            exozodi.exozodi_flux_ratio_v(1.0, 4.83, 1.0, 2.0), base / 4.0, rtol=1e-12
+            exozodi.exozodi_flux_ratio_v(3.0, 4.83, 1.0), 3.0 * base, rtol=1e-12
         )
-        np.testing.assert_allclose(
-            exozodi.exozodi_flux_ratio_v(3.0, 4.83, 1.0, 1.0), 3.0 * base, rtol=1e-12
-        )
+
+    def test_reduces_to_stark_c4_at_the_eeid(self):
+        # Stark et al. (2014) Eq. C4: at r = sqrt(L) AU the surface
+        # brightness is 10**(-0.4 dMV) * (1/L) * 10**(-0.4 x).
+        mv = np.array([3.5, 4.83, 6.2, 10.4])
+        lum = np.array([3.0, 1.0, 0.3, 0.02])
+        c4 = 10.0 ** (-0.4 * (mv - 4.83)) * 10.0**-8.8 / lum
+        got = exozodi.exozodi_flux_ratio_v(1.0, mv, np.sqrt(lum))
+        np.testing.assert_allclose(got, c4, rtol=1e-12)
+
+    def test_legacy_positional_luminosity_call_is_rejected(self):
+        # The removed l_star_lsun argument must not be silently read as r_au.
+        with pytest.raises(TypeError):
+            exozodi.exozodi_flux_ratio_v(1.0, 4.83, 1.0, 1.0)
 
 
 class TestFluxRatioBand:
@@ -166,8 +177,29 @@ class TestJez:
 
     def test_scale_jez(self):
         np.testing.assert_allclose(
-            exozodi.scale_jez(5.0, 3.0, 2.0, 0.5), 5.0 * 3.0 * 0.5 / 4.0, rtol=1e-14
+            exozodi.scale_jez(5.0, 3.0, 2.0, 0.5, 4.0),
+            5.0 * 3.0 * 0.5 * 4.0 / 4.0,
+            rtol=1e-14,
         )
+
+    def test_scale_jez_at_the_eeid_returns_the_reference_value(self):
+        lum = np.array([3.0, 1.0, 0.3, 0.02])
+        ref = exozodi.jez0(1e10, 4.83, lum, 1.0, 100.0)
+        got = exozodi.scale_jez(ref, 2.0, np.sqrt(lum), 0.7, lum)
+        np.testing.assert_allclose(got, ref * 2.0 * 0.7, rtol=1e-12)
+
+    def test_chain_matches_flux_ratio_and_is_luminosity_free(self):
+        # jez0 -> scale_jez must equal the general-radius V-band chain times
+        # F0 * f_lambda * bandwidth * fbeta, for any bolometric luminosity.
+        f0, flam, bw, fbeta, nz = 1e10, 1.3, 100.0, 0.6, 3.0
+        mv = np.array([3.5, 6.2, 10.4])
+        lum = np.array([3.0, 0.3, 0.02])
+        r = np.array([0.5, 1.0, 2.5])
+        chain = exozodi.scale_jez(
+            exozodi.jez0(f0, mv, lum, flam, bw), nz, r, fbeta, lum
+        )
+        direct = f0 * flam * bw * fbeta * exozodi.exozodi_flux_ratio_v(nz, mv, r)
+        np.testing.assert_allclose(chain, direct, rtol=1e-12)
 
 
 def test_backend_parity():
@@ -181,7 +213,6 @@ def test_backend_parity():
             (
                 np.array([1.0, 3.0]),
                 np.array([4.0, 5.0]),
-                np.array([1.0, 2.0]),
                 np.array([1.0, 1.5]),
             ),
         ),

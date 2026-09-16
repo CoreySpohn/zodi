@@ -1,17 +1,29 @@
 """Exozodiacal light conventions following Stark et al. (2014) and EXOSIMS.
 
-The chain, as derived in the EXOSIMS Fundamental Concepts documentation
-(rederiving Stark et al. 2014, Appendix C): one zodi of exozodiacal dust
-has the optical depth of the solar zodiacal cloud at 1 AU, placed at the
-Earth-equivalent instellation distance (EEID) of the target star, with
-V-band surface brightness ``x = 22`` mag arcsec-2. Scaling by the target
-star's absolute V magnitude, bolometric luminosity, orbital radius, dust
-inclination, and observing band gives
+One zodi of exozodiacal dust has the optical depth of the solar zodiacal
+cloud at 1 AU, placed at the Earth-equivalent instellation distance
+(EEID, ``sqrt(L)`` AU) of the target star, where it receives the same
+bolometric insolation. For a solar twin its V-band surface brightness
+there is ``x = 22`` mag arcsec-2. Stark et al. (2014, Eq. C4) gives the
+surface brightness at the EEID,
 
-    I_EZ = n_EZ * F0V * 10**(-0.4 (MV - MV_sun)) * 10**(-0.4 x)
-           * f_lambda * f(theta) / (L * r**2)
+    I_EZ(EEID) = n_EZ * F0V * 10**(-0.4 (MV - MV_sun)) * 10**(-0.4 x) / L
+
+and, for a radially flat optical depth, the surface brightness at any
+other radius follows the ``1/r**2`` illumination falloff measured from
+the EEID, ``I_EZ(r) = I_EZ(EEID) * (EEID / r)**2``. Because
+``EEID**2 = L``, the luminosity cancels:
+
+    I_EZ(r) = n_EZ * F0V * 10**(-0.4 (MV - MV_sun)) * 10**(-0.4 x)
+              * f_lambda * f(theta) / r**2
 
 with ``r`` in AU, ``L`` in solar luminosities, and ``MV_sun = 4.83``.
+The stellar V-band luminosity enters through the magnitude term; the
+bolometric luminosity only sets where the EEID lies. (For a radial
+profile ``tau ~ r**-gamma`` the exponent becomes ``2 + gamma``; this
+module adopts the flat profile.) Rescaling from 1 AU while also keeping
+the ``1/L`` of Eq. C4, as in the EXOSIMS Fundamental Concepts
+documentation, counts the luminosity twice.
 
 The band correction ``f_lambda`` rests on one physical assumption: the
 dust is a GREY SCATTERER, so the scattered component of the exozodi
@@ -75,20 +87,20 @@ _KB_J_PER_K = 1.380649e-23
 
 
 def exozodi_flux_ratio_v(
-    nzodi, mv_star, l_star_lsun, r_au, mag_1zodi=MAG_1ZODI_V_ARCSEC2, mv_sun=MV_SUN
+    nzodi, mv_star, r_au, *, mag_1zodi=MAG_1ZODI_V_ARCSEC2, mv_sun=MV_SUN
 ):
     """V-band exozodi surface brightness in the flux-ratio dialect.
 
-    The Stark et al. (2014) / EXOSIMS chain before band and inclination
-    corrections:
-    ``n * 10**(-0.4 (MV - MV_sun)) * 10**(-0.4 x) / (L * r**2)``,
-    dimensionless per square arcsecond relative to the V-band
-    zero-magnitude flux density.
+    The Stark et al. (2014) chain before band and inclination corrections,
+    ``n * 10**(-0.4 (MV - MV_sun)) * 10**(-0.4 x) / r**2``, dimensionless
+    per square arcsecond relative to the V-band zero-magnitude flux
+    density. It depends on the star only through its V-band luminosity.
+    Evaluating at the EEID, ``r_au = sqrt(L)``, recovers Stark et al.
+    (2014) Eq. C4.
 
     Args:
         nzodi: Exozodi level in zodis.
         mv_star: Absolute V magnitude of the star.
-        l_star_lsun: Bolometric luminosity of the star in solar units.
         r_au: Circumstellar radius in AU at which to evaluate.
         mag_1zodi: V surface brightness of one zodi at the EEID in
             mag arcsec-2.
@@ -97,12 +109,12 @@ def exozodi_flux_ratio_v(
     Returns:
         Flux ratio per square arcsecond.
     """
-    xp = array_namespace(nzodi, mv_star, l_star_lsun, r_au)
+    xp = array_namespace(nzodi, mv_star, r_au)
     return (
         xp.asarray(nzodi)
         * 10.0 ** (-0.4 * (xp.asarray(mv_star) - mv_sun))
         * 10.0 ** (-0.4 * mag_1zodi)
-        / (xp.asarray(l_star_lsun) * xp.asarray(r_au) ** 2)
+        / xp.asarray(r_au) ** 2
     )
 
 
@@ -119,9 +131,12 @@ def exozodi_flux_ratio_band(
     The pyEDITH formulation of the grey-scatterer assumption: the V-band
     surface brightness is scaled by the target star's color,
     ``10**(-0.4 (m_band - m_V))``, so the exozodi spectrum follows the
-    stellar spectrum exactly (no thermal term). Evaluated at the EEID with
-    no explicit luminosity or radius scaling, matching
-    ``pyEDITH.astrophysical_scene.calc_exozodi_flux``.
+    stellar spectrum exactly (no thermal term). There is no explicit
+    luminosity or radius scaling, matching
+    ``pyEDITH.astrophysical_scene.calc_exozodi_flux``: the V-band factor
+    equals :func:`exozodi_flux_ratio_v` at ``r = 1`` AU. The Stark et al.
+    (2014) Eq. C4 value at the EEID is this divided by the bolometric
+    luminosity in solar units.
 
     Args:
         nzodi: Exozodi level in zodis.
@@ -355,12 +370,14 @@ def jez0(
     mag_1zodi=MAG_1ZODI_V_ARCSEC2,
     mv_sun=MV_SUN,
 ):
-    """Reference exozodi intensity at 1 AU for 1 zodi (EXOSIMS ``calc_JEZ0``).
+    """Reference exozodi intensity at the EEID for 1 zodi (EXOSIMS ``calc_JEZ0``).
 
     ``JEZ0 = F0V * 10**(-0.4 (MV - MV_sun)) * 10**(-0.4 x) * f_lambda
     * bandwidth / L`` in ph s-1 m-2 arcsec-2 when ``F0V`` is in
-    ph s-1 m-2 nm-1 and the bandwidth in nm. Scale to an epoch with
-    :func:`scale_jez`.
+    ph s-1 m-2 nm-1 and the bandwidth in nm. This is Stark et al. (2014)
+    Eq. C4 in the observing band, i.e. the value at the EEID
+    (``sqrt(L)`` AU), not at 1 AU. It matches EXOSIMS ``calc_JEZ0``
+    numerically. Scale to an epoch with :func:`scale_jez`.
 
     Args:
         f0v_ph_s_m2: V-band zero-magnitude flux density in
@@ -389,25 +406,36 @@ def jez0(
     )
 
 
-def scale_jez(jez0_value, nzodi, r_au, fbeta):
-    """Scale the cached reference intensity to an epoch's geometry.
+def scale_jez(jez0_value, nzodi, r_au, fbeta, l_star_lsun):
+    """Scale the EEID reference intensity to an epoch's geometry.
 
-    ``JEZ = JEZ0 * n_EZ * f(theta) / r**2`` -- the only three terms that
-    change during a mission (EXOSIMS Fundamental Concepts documentation).
+    ``JEZ = JEZ0 * n_EZ * f(theta) * (EEID / r)**2`` with
+    ``EEID**2 = L``, i.e. ``JEZ0 * n_EZ * f(theta) * L / r**2``. The
+    ``1/r**2`` illumination falloff is measured from the EEID, where
+    :func:`jez0` is evaluated, so the luminosity in ``JEZ0`` cancels and
+    the result depends on the star only through its V-band luminosity and
+    color.
+
+    EXOSIMS ``SimulatedUniverse.scale_JEZ`` applies ``n_EZ / r**2`` to the
+    same ``JEZ0`` without the factor ``L``, which counts the luminosity
+    twice; its values equal this function's divided by ``L``.
 
     Args:
-        jez0_value: Reference intensity from :func:`jez0`.
+        jez0_value: Reference intensity at the EEID from :func:`jez0`.
         nzodi: Exozodi level in zodis.
         r_au: Planet-star (or evaluation) radius in AU.
         fbeta: Latitudinal factor from :func:`latitudinal_factor`.
+        l_star_lsun: Bolometric luminosity in solar units (the same value
+            passed to :func:`jez0`).
 
     Returns:
         Exozodi intensity at the epoch, same units as ``jez0_value``.
     """
-    xp = array_namespace(jez0_value, nzodi, r_au, fbeta)
+    xp = array_namespace(jez0_value, nzodi, r_au, fbeta, l_star_lsun)
     return (
         xp.asarray(jez0_value)
         * xp.asarray(nzodi)
         * xp.asarray(fbeta)
+        * xp.asarray(l_star_lsun)
         / xp.asarray(r_au) ** 2
     )

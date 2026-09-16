@@ -12,8 +12,10 @@ next.
   Table 17 position dependence and Table 19 wavelength dependence, with the
   interpolation, anchoring, and near-Sun conventions of the production
   codes stated explicitly (`zodi.specific_intensity`, `zodi.zodi_flux_ratio`).
-- The exozodi chain of Stark et al. (2014) as implemented by EXOSIMS
-  (`zodi.exozodi_flux_ratio_v`, `zodi.jez0`, `zodi.scale_jez`), the three
+- The exozodi chain of Stark et al. (2014), anchored at the EEID and
+  numerically compatible with EXOSIMS `calc_JEZ0`, with the radial scaling
+  measured from the EEID (`zodi.exozodi_flux_ratio_v`, `zodi.jez0`,
+  `zodi.scale_jez`), the three
   published latitudinal models (`zodi.latitudinal_factor`), and the
   grey-scatterer band correction in both production flavors: the
   stellar-color scaling used by pyEDITH (`zodi.exozodi_flux_ratio_band`)

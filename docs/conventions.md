@@ -116,27 +116,48 @@ $10^{23 - 48.6/2.5}$ Jy) and `zodi.units.mag_to_flux_ratio`.
 
 ### 3.1 The magnitude chain
 
-Following Stark et al. (2014, Appendix C) as rederived in the EXOSIMS
-Fundamental Concepts documentation: one zodi is the solar optical
-depth at 1 AU placed at the target star's Earth-equivalent instellation
-distance (EEID), with V-band surface brightness $x = 22$ mag arcsec
-$^{-2}$, and
+Following Stark et al. (2014, Appendix C): one zodi is the solar
+optical depth at 1 AU placed at the target star's Earth-equivalent
+instellation distance (EEID), $\sqrt{L_*}$ AU, where the dust receives
+the same bolometric insolation as the Solar System's dust at 1 AU. For
+a solar twin its V-band surface brightness there is $x = 22$ mag
+arcsec$^{-2}$. Equation C4 of Stark et al. (2014) gives the surface
+brightness at the EEID,
 
 $$
-I_\mathrm{EZ} = n_\mathrm{EZ}\, F_0^V\,
+I_\mathrm{EZ}^V(\mathrm{EEID}) = n_\mathrm{EZ}\, F_0^V\,
+  10^{-0.4 (M_V - M_{V,\odot})}\, 10^{-0.4 x}\, \frac{1}{L_*}.
+$$
+
+The $1/L_*$ is the $1/r^2$ illumination evaluated at $r^2 = L_*$. For a
+radially flat optical depth, the surface brightness at any other radius
+follows the $1/r^2$ falloff measured from the EEID,
+$I_\mathrm{EZ}^V(r) = I_\mathrm{EZ}^V(\mathrm{EEID})\,(\mathrm{EEID}/r)^2$,
+and the luminosity cancels:
+
+$$
+I_\mathrm{EZ}(r) = n_\mathrm{EZ}\, F_0^V\,
   10^{-0.4 (M_V - M_{V,\odot})}\, 10^{-0.4 x}\,
-  \frac{f_\lambda\, f(\theta)}{L_*\, r^2}
+  \frac{f_\lambda\, f(\theta)}{r^2}
 $$
 
 with $r$ in AU, $L_*$ in solar luminosities, and $M_{V,\odot} = 4.83$.
-`zodi.exozodi_flux_ratio_v` is this chain without $f_\lambda f(\theta)$
-and without $F_0$; `zodi.jez0` and `zodi.scale_jez` reproduce the
-EXOSIMS `calc_JEZ0` caching split (verified exact against the
-prototype):
+The stellar V-band luminosity enters through the magnitude term; the
+bolometric luminosity only sets where the EEID lies. For a radial
+profile $\tau \propto r^{-\gamma}$ the exponent becomes $2 + \gamma$
+($\gamma \approx 0.34$ for the zodiacal cloud); this library adopts the
+flat profile.
+
+`zodi.exozodi_flux_ratio_v` is the general-radius chain without
+$f_\lambda f(\theta)$ and without $F_0$. `zodi.jez0` is the EEID value
+in the observing band and matches EXOSIMS `calc_JEZ0` (verified exact
+against the prototype). `zodi.scale_jez` carries it to radius $r$:
 
 $$
 J_\mathrm{EZ}(r, n_\mathrm{EZ}, \theta)
-  = J_\mathrm{EZ,0}\; \frac{n_\mathrm{EZ}}{r^2} f(\theta).
+  = J_\mathrm{EZ,0}\; n_\mathrm{EZ}\, f(\theta)
+    \left(\frac{\mathrm{EEID}}{r}\right)^2
+  = J_\mathrm{EZ,0}\; \frac{n_\mathrm{EZ}\, f(\theta)\, L_*}{r^2}.
 $$
 
 ### 3.2 The grey-scatterer band correction
@@ -220,20 +241,23 @@ $I$ into $[0^\circ, 90^\circ]$), matching `EXOSIMS.calc_fbeta`
 
 ## 5. Open cross-code questions for maintainers
 
-Documented divergences found while pinning the conventions; the
-library implements each code's dialect verbatim and takes no side.
+Documented divergences found while pinning the conventions. Where a
+divergence is an error rather than a convention, the library
+implements the corrected form and says so.
 
-1. **Luminosity normalization of the exozodi.** The EXOSIMS chain
-   carries $1/(L_* r^2)$ with $r$ in AU (`calc_JEZ0` divides by $L$,
-   `scale_jez` by $r^2$). The pyEDITH expression carries no
-   $1/L_*$ (and no explicit $r$), so for non-solar stars the two codes
-   differ by a factor of $L_*$ at matched geometry. Relatedly,
-   evaluating the EXOSIMS general-$r$ form at the EEID
-   ($r = \sqrt{L_*}$) gives a $1/L_*^2$ dependence, while equation C4
-   of Stark et al. (2014) (surface brightness *at* the EEID) carries
-   $1/L_*$. The intended anchor of the $1/r^2$ illumination scaling
-   (1 AU versus EEID) decides which is meant; maintainers should
-   confirm.
+1. **Luminosity normalization of the exozodi (resolved).** The EXOSIMS
+   Fundamental Concepts documentation starts from Eq. C4, rescales the
+   solar term by $(1\ \mathrm{AU}/r)^2$, and keeps C4's $1/L_*$, giving
+   $1/(L_* r^2)$. That rescales from 1 AU a value that lives at the
+   EEID, so the luminosity is counted twice: at $r = \sqrt{L_*}$ the
+   documented form gives $1/L_*^2$ instead of C4's $1/L_*$. In code,
+   `calc_JEZ0` (which divides by $L$) is correct as the EEID value, and
+   `SimulatedUniverse.scale_JEZ` omits the factor $L_*$; EXOSIMS values
+   from `scale_JEZ` equal `zodi.scale_jez` divided by $L_*$. The
+   pyEDITH expression carries no $1/L_*$ and no $r$, which equals the
+   correct surface brightness at $r = 1$ AU; applied at the EEID it
+   lacks C4's $1/L_*$. Whether pyEDITH intends the EEID is for its
+   maintainers to confirm.
 2. **Table 19 interpolation order** (section 2.3): quadratic spline
    (EXOSIMS) versus log-log linear (this library, skyscapes) is a 4.6
    percent difference at 550 nm.
