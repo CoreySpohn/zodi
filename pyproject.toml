@@ -26,8 +26,18 @@ Documentation = "https://zodi.readthedocs.io"
 [project.optional-dependencies]
 jax = ["jax>=0.4.32", "jaxlib>=0.4.32"]
 dev = ["pre-commit"]
-test = ["pytest", "hypothesis", "ineedvalidation>=1.0"]
-docs = ["myst-nb", "sphinx-autoapi", "sphinx-book-theme"]
+test = [
+    "pytest",
+    "hypothesis",
+    "ineedvalidation>=1.0",
+    "pytest-cov",
+    "pytest-xdist",
+    "pytest-testmon",
+    "pytest-markdown-docs",
+    "pytest-timeout",
+    "pytest-fail-slow",
+]
+docs = ["sphinx", "myst-nb", "sphinx-autoapi", "sphinx-book-theme"]
 
 [tool.ruff.lint]
 select = ["B", "D", "E", "F", "I", "UP", "RUF"]
@@ -49,6 +59,32 @@ packages = ["src/zodi"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "medium: tests with a 30-second default time budget",
+    "slow: tests with a 300-second default time budget, run nightly",
+]
+
+[tool.testbudget]
+library = "zodi"
+mode = "report"
+unit_s = 5
+medium_s = 30
+slow_s = 300
+
+[tool.deptry]
+known_first_party = ["zodi"]
+optional_dependencies_dev_groups = ["dev", "docs", "test"]
+
+[tool.deptry.per_rule_ignores]
+# Array namespaces dispatch JAX inputs without importing JAX in the NumPy core.
+# The optional extra supplies JAX and its compiled backend for callers.
+DEP002 = ["jax", "jaxlib"]
+
+[tool.ty.environment]
+python-version = "3.11"
+
+[tool.ty.src]
+include = ["src/zodi"]
 
 # Verification and validation evidence, collected by the ineedvalidation
 # pytest plugin (run with --vv-evidence PATH to write the ledger). Each prefix
