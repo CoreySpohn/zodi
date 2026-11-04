@@ -1,7 +1,23 @@
 """Shared fixtures: parametrize tests over the installed array backends."""
 
+import importlib.util
+import os
+
 import numpy as np
 import pytest
+from hypothesis import settings
+
+# hwoutils is optional so NumPy-only test installs do not acquire JAX.
+pytest_plugins = []
+if (
+    importlib.util.find_spec("hwoutils") is not None
+    and importlib.util.find_spec("hwoutils.testbudget") is not None
+):
+    pytest_plugins.append("hwoutils.testbudget.plugin")
+
+settings.register_profile("quick", max_examples=25, deadline=None)
+settings.register_profile("nightly", max_examples=200, deadline=None)
+settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "quick"))
 
 BACKENDS = [pytest.param(np, id="numpy")]
 
