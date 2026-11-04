@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Zodiacal and exozodiacal light brightness conventions with a single-source numpy/JAX core"
 authors = [{ name = "Corey Spohn", email = "corey.a.spohn@nasa.gov" }]
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 license = { file = "LICENSE" }
 classifiers = [
     "Development Status :: 4 - Beta",
