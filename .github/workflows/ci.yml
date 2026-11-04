@@ -61,10 +61,10 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: .jax_cache
-          key: jax-${{ runner.os }}-${{ matrix.extras }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
+          key: jax-${{ runner.os }}-${{ matrix.extras == 'test' && 'test' || 'test-jax' }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
           restore-keys: |
-            jax-${{ runner.os }}-${{ matrix.extras }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-
-            jax-${{ runner.os }}-${{ matrix.extras }}-py${{ matrix.python-version }}-
+            jax-${{ runner.os }}-${{ matrix.extras == 'test' && 'test' || 'test-jax' }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-
+            jax-${{ runner.os }}-${{ matrix.extras == 'test' && 'test' || 'test-jax' }}-py${{ matrix.python-version }}-
 
       - name: Install the package and test tools
         run: |
