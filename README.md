@@ -47,6 +47,8 @@ vmap, and differentiate natively. Hard dependencies are `numpy` and
 the JAX side. JAX users should enable float64:
 
 ```python
+import jax
+
 jax.config.update("jax_enable_x64", True)
 ```
 

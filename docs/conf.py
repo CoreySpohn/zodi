@@ -15,8 +15,10 @@ extensions = [
     "sphinx.ext.mathjax",
 ]
 
+exclude_patterns = ["_build", ".build", "Thumbs.db", ".DS_Store"]
+
 autoapi_dirs = ["../src"]
-autoapi_ignore = ["**/*version.py"]
+# Parse the generated version module so AutoAPI can resolve zodi.__version__.
 myst_enable_extensions = ["amsmath", "dollarmath"]
 
 html_theme = "sphinx_book_theme"
