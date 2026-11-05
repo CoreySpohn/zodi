@@ -1,5 +1,13 @@
 # zodi
 
+<p align="center">
+  <a href="https://pypi.org/project/zodi/"><img src="https://img.shields.io/pypi/v/zodi.svg?style=flat-square&logo=pypi" alt="PyPI"/></a>
+  <a href="https://zodi.readthedocs.io"><img src="https://readthedocs.org/projects/zodi/badge/?version=latest&style=flat-square" alt="Documentation Status"/></a>
+  <a href="https://github.com/CoreySpohn/zodi/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/CoreySpohn/zodi/ci.yml?branch=main&style=flat-square&logo=github&label=tests" alt="Tests"/></a>
+  <a href="https://github.com/CoreySpohn/zodi/blob/main/LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square" alt="License"/></a>
+  <a href="https://github.com/CoreySpohn/zodi/blob/main/pyproject.toml"><img src="https://img.shields.io/badge/python-3.12%2B-blue.svg?style=flat-square&logo=python" alt="Python 3.12+"/></a>
+</p>
+
 Zodiacal and exozodiacal light brightness conventions for exoplanet imaging,
 from a single source that runs on numpy and JAX.
 
