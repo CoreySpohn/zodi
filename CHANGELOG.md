@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.0](https://github.com/CoreySpohn/zodi/compare/v1.0.0...v1.1.0) (2026-11-12)
+
+
+### Features
+
+* **zodi:** AYO default zodi color in AB, with the F_nu conversion ([afce5db](https://github.com/CoreySpohn/zodi/commit/afce5db3a8f955a85833236ed1f6e9c5a3e27cb6))
+
 ## [1.0.0](https://github.com/CoreySpohn/zodi/compare/v0.1.0...v1.0.0) (2026-09-16)
 
 
