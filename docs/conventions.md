@@ -113,6 +113,19 @@ their own photometric system (EXOSIMS passes
 use `zodi.surface_brightness_ab_mag` (exact AB zero point,
 $10^{23 - 48.6/2.5}$ Jy) and `zodi.units.mag_to_flux_ratio`.
 
+### 2.5 The AYO default and color in AB
+
+The AYO / ETC calibration convention fixes the local zodi at 22 mag
+arcsec$^{-2}$ (AB) at V (550 nm) and carries it to other wavelengths
+with the Table 19 color. An AB magnitude is a flux per unit frequency,
+so the color must be an $F_\nu$ ratio: the Table 19 ratio times
+$(\lambda/\lambda_\mathrm{ref})^2$. `zodi.ab_color_correction` is that
+ratio and `zodi.ayo_default_ab_mag` applies it to the default. Applying
+the $F_\lambda$ ratio of `zodi.color_correction` to an AB magnitude
+instead misses $(\lambda/\lambda_V)^2$, a factor of 2.7 in flux at
+910 nm; a test compares the default against the position-dependent
+path to guard this.
+
 ## 3. Exozodiacal light
 
 ### 3.1 The magnitude chain

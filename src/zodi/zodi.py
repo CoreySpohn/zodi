@@ -30,6 +30,10 @@ from zodi._interp import interp1d_clamped, interp2d_bilinear_clamped
 from zodi._xp import array_namespace
 
 __all__ = [
+    "AYO_DEFAULT_ZODI_MAG_V",
+    "V_BAND_WAVELENGTH_NM",
+    "ab_color_correction",
+    "ayo_default_ab_mag",
     "color_correction",
     "position_factor",
     "specific_intensity",
@@ -37,6 +41,11 @@ __all__ = [
     "surface_brightness_ab_mag",
     "zodi_flux_ratio",
 ]
+
+# AYO / ETC calibration default: local zodi surface brightness at V, AB mag arcsec-2.
+AYO_DEFAULT_ZODI_MAG_V = 22.0
+# V-band effective wavelength used as the AYO reference, nm.
+V_BAND_WAVELENGTH_NM = 550.0
 
 _LOG_T19_LAM_UM = np.log10(tables.TABLE19_WAVELENGTH_UM)
 _LOG_T19_RADIANCE = np.log10(tables.TABLE19_RADIANCE_W_M2_SR_UM)
@@ -122,6 +131,54 @@ def color_correction(wavelength_nm, reference_wavelength_nm=500.0, photon_units=
             wavelength_nm, reference_wavelength_nm
         )
     return factor
+
+
+def ab_color_correction(wavelength_nm, reference_wavelength_nm=500.0):
+    """Table 19 color as a ratio of AB flux densities (F_nu) between two wavelengths.
+
+    Table 19 is a spectral radiance per unit wavelength. An AB magnitude
+    refers to flux per unit frequency, so a brightness known in AB at the
+    reference wavelength scales with the Table 19 ratio times
+    ``(lambda / lambda_ref)**2`` (``f_nu = f_lambda * lambda**2 / c``).
+    Use this for AB magnitudes and Jy; use :func:`color_correction` for
+    power or photon spectral radiance.
+
+    Args:
+        wavelength_nm: Target wavelength in nm.
+        reference_wavelength_nm: Reference wavelength in nm.
+
+    Returns:
+        Dimensionless F_nu ratio, target over reference.
+    """
+    xp = array_namespace(wavelength_nm, reference_wavelength_nm)
+    ratio = xp.asarray(wavelength_nm) / xp.asarray(reference_wavelength_nm)
+    return color_correction(wavelength_nm, reference_wavelength_nm) * ratio**2
+
+
+def ayo_default_ab_mag(
+    wavelength_nm,
+    mag_v=AYO_DEFAULT_ZODI_MAG_V,
+    reference_wavelength_nm=V_BAND_WAVELENGTH_NM,
+):
+    """AYO default zodi surface brightness at any wavelength, AB mag arcsec-2.
+
+    The AYO convention fixes the V-band surface brightness (22 mag
+    arcsec-2, AB) and carries it to other wavelengths with the Leinert
+    Table 19 color. The color is applied in F_nu (see
+    :func:`ab_color_correction`), so the result follows the same color as
+    the position-dependent path in :func:`surface_brightness_ab_mag`.
+
+    Args:
+        wavelength_nm: Wavelength in nm.
+        mag_v: AB surface brightness at the reference wavelength.
+        reference_wavelength_nm: Reference wavelength in nm (V band).
+
+    Returns:
+        AB surface brightness in magnitudes per square arcsecond.
+    """
+    xp = array_namespace(wavelength_nm)
+    color = ab_color_correction(wavelength_nm, reference_wavelength_nm)
+    return mag_v - 2.5 * xp.log10(color)
 
 
 def specific_intensity(

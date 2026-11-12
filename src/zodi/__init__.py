@@ -31,6 +31,10 @@ from zodi.exozodi import (
     theta_from_inclination,
 )
 from zodi.zodi import (
+    AYO_DEFAULT_ZODI_MAG_V,
+    V_BAND_WAVELENGTH_NM,
+    ab_color_correction,
+    ayo_default_ab_mag,
     color_correction,
     position_factor,
     specific_intensity,
@@ -40,10 +44,14 @@ from zodi.zodi import (
 )
 
 __all__ = [
+    "AYO_DEFAULT_ZODI_MAG_V",
     "MAG_1ZODI_V_ARCSEC2",
     "MV_SUN",
     "T_DUST_K",
+    "V_BAND_WAVELENGTH_NM",
     "__version__",
+    "ab_color_correction",
+    "ayo_default_ab_mag",
     "band_average",
     "blackbody_spectral_radiance",
     "color_correction",

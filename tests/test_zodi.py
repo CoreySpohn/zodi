@@ -145,3 +145,44 @@ def test_backend_parity():
         b = fn(*(jnp.asarray(x) for x in args))
         # a few ULPs of round-off from transcendental ops and fma fusion
         np.testing.assert_allclose(np.asarray(a), np.asarray(b), rtol=1e-13, atol=0.0)
+
+
+@pytest.mark.parametrize("wavelength_nm", [400.0, 500.0, 910.0, 1200.0])
+def test_ayo_default_color_matches_leinert_path_color(wavelength_nm):
+    """The AYO default and the position-dependent path share one color.
+
+    Both are AB magnitudes, so the magnitude difference between a
+    wavelength and V must agree whichever route produced it. A Table 19
+    color applied without the lambda**2 conversion to F_nu fails this by
+    2.5 * log10((lambda / 550)**2), 1.09 mag at 910 nm. Tolerance basis:
+    exact algebra, both routes share the same tables.
+    """
+    lam = wavelength_nm
+    ayo = zodi.ayo_default_ab_mag(lam) - zodi.ayo_default_ab_mag(550.0)
+    path = zodi.surface_brightness_ab_mag(
+        135.0, 0.0, lam, anchor="table19"
+    ) - zodi.surface_brightness_ab_mag(135.0, 0.0, 550.0, anchor="table19")
+    np.testing.assert_allclose(ayo, path, atol=1e-12)
+
+
+def test_ayo_default_reference_wavelength_returns_reference_mag():
+    np.testing.assert_allclose(zodi.ayo_default_ab_mag(550.0), 22.0, atol=1e-14)
+    np.testing.assert_allclose(
+        zodi.ayo_default_ab_mag(550.0, mag_v=21.5), 21.5, atol=1e-14
+    )
+
+
+def test_ab_color_correction_is_flambda_color_times_lambda_squared():
+    lam, ref = 910.0, 550.0
+    expected = zodi.color_correction(lam, ref) * (lam / ref) ** 2
+    np.testing.assert_allclose(zodi.ab_color_correction(lam, ref), expected, rtol=1e-14)
+    np.testing.assert_allclose(zodi.ab_color_correction(ref, ref), 1.0, rtol=1e-14)
+
+
+def test_ayo_default_ab_mag_backends(xp):
+    lam = xp.asarray([500.0, 910.0])
+    out = zodi.ayo_default_ab_mag(lam)
+    assert out.shape == (2,)
+    np.testing.assert_allclose(
+        np.asarray(out), zodi.ayo_default_ab_mag(np.array([500.0, 910.0])), rtol=1e-13
+    )
