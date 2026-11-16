@@ -30,6 +30,8 @@ from a single source that runs on numpy and JAX.
 - Unit conversions between the dialects in common use: magnitudes per
   square arcsecond, flux ratio per square arcsecond, spectral radiance,
   photon rates, and MJy per steradian (`zodi.units`).
+- Equinox local-background models (`zodi.jax`): `AYOZodi`, `LeinertZodi`,
+  and `PrecomputedZodi`, sharing the `AbstractLocalZodi` interface.
 
 ## Documentation and evidence
 
@@ -51,14 +53,34 @@ Functions compute in the namespace of their array inputs (via
 `array-api-compat`), so numpy callers get numpy in and numpy out with no JAX
 anywhere in their dependency tree, while JAX callers get functions that jit,
 vmap, and differentiate natively. Hard dependencies are `numpy` and
-`array-api-compat` only; the `[jax]` extra exists so the test suite can run
-the JAX side. JAX users should enable float64:
+`array-api-compat` only; the `[jax]` extra adds JAX and Equinox for the
+scene models and JAX array inputs. Importing `zodi` alone does not import
+JAX or Equinox. JAX users should enable float64:
 
 ```python
 import jax
 
 jax.config.update("jax_enable_x64", True)
 ```
+
+The optional scene models evaluate the same namespace-generic physics:
+
+```python
+import jax.numpy as jnp
+from zodi.jax import LeinertZodi
+
+radiance = LeinertZodi().photon_radiance(
+    jnp.array([500.0, 550.0, 700.0]),
+    ecliptic_latitude_deg=30.0,
+    solar_longitude_deg=120.0,
+)
+```
+
+Radiance is in photons/s/m2/nm/sr and preserves the wavelength shape.
+`AYOZodi` and `LeinertZodi` expose Table 19 breakpoints through
+`quadrature_knots_nm`; `PrecomputedZodi` exposes its supplied `wavelengths_nm`
+and returns NaN outside their support. The functional JAX helpers are also
+public in `zodi.jax.leinert`.
 
 Random sampling is deliberately absent from the library: any distribution
 it exposes is a quantile function (inverse CDF), and callers bring uniforms
@@ -78,8 +100,8 @@ reflected-light brightness conventions used in exoplanet direct imaging.
 pip install zodi
 ```
 
-The hard dependencies are `numpy` and `array-api-compat`. To run the JAX
-side of the test suite, install the extras:
+The hard dependencies are `numpy` and `array-api-compat`. For the Equinox
+models, install `zodi[jax]`. To also run the test suite, install:
 
 ```
 pip install "zodi[jax,test]"

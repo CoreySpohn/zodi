@@ -57,13 +57,13 @@ import numpy as np
 from zodi import tables
 from zodi._interp import interp1d_clamped
 from zodi._xp import array_namespace
+from zodi.units import C_M_PER_S, H_J_S, KB_J_PER_K
 
 __all__ = [
     "MAG_1ZODI_V_ARCSEC2",
     "MAX_WAVELENGTH_UM",
     "MV_SUN",
     "T_DUST_K",
-    "band_average",
     "blackbody_spectral_radiance",
     "exozodi_flux_ratio_band",
     "exozodi_flux_ratio_v",
@@ -86,10 +86,6 @@ T_DUST_K = 261.5
 # almost certainly a nm value passed by mistake (the zodi and units modules
 # take nm), since the Leinert Table 19 spectrum ends at 140 um.
 MAX_WAVELENGTH_UM = 200.0
-
-_C_M_PER_S = 299792458.0
-_H_J_S = 6.62607015e-34
-_KB_J_PER_K = 1.380649e-23
 
 
 def _check_wavelength_um(xp, wavelength_um):
@@ -263,8 +259,8 @@ def blackbody_spectral_radiance(wavelength_um, temperature_k):
     _check_wavelength_um(xp, wavelength_um)
     lam_m = xp.asarray(wavelength_um) * 1e-6
     t = xp.asarray(temperature_k)
-    exponent = _H_J_S * _C_M_PER_S / (lam_m * _KB_J_PER_K * t)
-    radiance_per_m = 2.0 * _H_J_S * _C_M_PER_S**2 / lam_m**5 / xp.expm1(exponent)
+    exponent = H_J_S * C_M_PER_S / (lam_m * KB_J_PER_K * t)
+    radiance_per_m = 2.0 * H_J_S * C_M_PER_S**2 / lam_m**5 / xp.expm1(exponent)
     return radiance_per_m * 1e-6
 
 
@@ -355,37 +351,6 @@ def fit_grey_scatter_constants(
     return f_star, f_thermal
 
 
-def band_average(wavelength_um, values, throughput):
-    """Throughput-weighted bandpass average of a spectral quantity.
-
-    ``<I> = integral(P * I dlam) / integral(P dlam)`` with trapezoidal
-    integration; the denominator is the bandpass equivalent width, so
-    bandpasses of different shapes are comparable (EXOSIMS Fundamental
-    Concepts documentation, band-averaged intensity equation).
-
-    Args:
-        wavelength_um: Strictly increasing wavelength grid in um.
-        values: Spectral quantity sampled on the grid.
-        throughput: Bandpass throughput sampled on the grid.
-
-    Returns:
-        The band-averaged value.
-    """
-    xp = array_namespace(wavelength_um, values, throughput)
-    _check_wavelength_um(xp, wavelength_um)
-    lam = xp.asarray(wavelength_um)
-    weighted = xp.asarray(values) * xp.asarray(throughput)
-    numerator = _trapezoid(xp, weighted, lam)
-    denominator = _trapezoid(xp, xp.asarray(throughput), lam)
-    return numerator / denominator
-
-
-def _trapezoid(xp, y, x):
-    """Trapezoidal integral of y over x (shared-source, differentiable)."""
-    dx = x[1:] - x[:-1]
-    return xp.sum(0.5 * (y[1:] + y[:-1]) * dx)
-
-
 def jez0(
     f0v_ph_s_m2,
     mv_star,
@@ -409,10 +374,9 @@ def jez0(
             ph s-1 m-2 nm-1 (the caller's photometric system).
         mv_star: Absolute V magnitude of the star.
         l_star_lsun: Bolometric luminosity in solar units.
-        flambda: Band color scale factor (1 for V; see
-            :func:`band_average` and :func:`grey_scatter_intensity` for
-            constructing it, or a stellar-color ratio for the
-            scattered-only flavor).
+        flambda: Band color scale factor (1 for V), computed by averaging
+            :func:`grey_scatter_intensity` over the observing and V bands,
+            or a stellar-color ratio for the scattered-only flavor.
         bandwidth_nm: Bandpass equivalent width in nm.
         mag_1zodi: V surface brightness of one zodi in mag arcsec-2.
         mv_sun: Absolute V magnitude of the Sun.

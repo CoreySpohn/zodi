@@ -75,33 +75,23 @@ def test_backend_parity():
 
 @vv.case("zodi-units", "code-verification")
 def test_constant_copies_and_hwoutils_crosscheck():
-    """Fails if private SI copies drift or a conversion constant loses precision.
+    """Fails if SI or AB constants drift; exact equality is required.
 
-    Tolerance basis: floating-point. SI copies agree bitwise. For the
-    independently evaluated AB exponent and angular conversions, allow
-    16 float64 eps relative (3.553e-15), zero absolute tolerance. This
-    covers rounding of the decimal 48.6 and the reciprocal/square steps.
+    Tolerance basis: exact-algebra for the four shared declarations;
+    16 float64 eps for reciprocal/square rounding in angular conversions.
     """
-    from zodi import exozodi
-
-    assert (
-        np.float64(units.C_M_PER_S).tobytes()
-        == np.float64(exozodi._C_M_PER_S).tobytes()
-    )
-    assert np.float64(units.H_J_S).tobytes() == np.float64(exozodi._H_J_S).tobytes()
     pytest.importorskip("hwoutils", reason="optional independent constants cross-check")
     from hwoutils import constants, conversions
 
-    for own, reference in (
-        (units.C_M_PER_S, constants.c),
-        (units.H_J_S, constants.h),
-        (exozodi._KB_J_PER_K, constants.k_B),
-        (units.AB_ZERO_POINT_JY, conversions.AB_ZERO_POINT_JY),
-        (units.ARCSEC2_PER_SR, constants.rad2arcsec**2),
-        (units.ARCSEC2_PER_SR, 1.0 / constants.arcsec2rad**2),
-        # 1 Jy/arcsec^2 -> MJy/sr; undo the Jy -> MJy factor.
-        (units.ARCSEC2_PER_SR, conversions.jy_per_arcsec2_to_mjy_per_sr(1.0) * 1e6),
+    assert units.C_M_PER_S == constants.c
+    assert units.H_J_S == constants.h
+    assert units.KB_J_PER_K == constants.k_B
+    assert units.AB_ZERO_POINT_JY == constants.AB_ZERO_POINT_JY
+    for reference in (
+        constants.rad2arcsec**2,
+        1.0 / constants.arcsec2rad**2,
+        conversions.jy_per_arcsec2_to_mjy_per_sr(1.0) * 1e6,
     ):
         np.testing.assert_allclose(
-            own, reference, rtol=16 * np.finfo(float).eps, atol=0
+            units.ARCSEC2_PER_SR, reference, rtol=16 * np.finfo(float).eps, atol=0
         )

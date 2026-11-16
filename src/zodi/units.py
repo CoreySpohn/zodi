@@ -23,6 +23,7 @@ __all__ = [
     "ARCSEC2_PER_SR",
     "C_M_PER_S",
     "H_J_S",
+    "KB_J_PER_K",
     "ab_mag_arcsec2_from_intensity",
     "flux_ratio_to_mag",
     "intensity_from_ab_mag_arcsec2",
@@ -34,6 +35,7 @@ __all__ = [
 
 C_M_PER_S = 299792458.0
 H_J_S = 6.62607015e-34
+KB_J_PER_K = 1.380649e-23
 AB_ZERO_POINT_JY = 10.0 ** (23.0 - 48.6 / 2.5)
 ARCSEC2_PER_SR = float((180.0 / np.pi * 3600.0) ** 2)
 

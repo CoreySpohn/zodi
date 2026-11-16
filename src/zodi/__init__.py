@@ -14,21 +14,14 @@ dialects in use across codes (``zodi.units``). Geometry, star catalogs,
 spectra, and bandpasses are caller inputs, never package state.
 """
 
+from importlib import import_module
+from typing import TYPE_CHECKING
+
 from zodi._version import __version__
-from zodi.amplitude import (
-    AbstractDustAmplitude,
-    DensityDust,
-    LocalZodiMultiple,
-    Passband,
-    ReferenceStar,
-    SurfaceBrightnessDust,
-    Viewing,
-)
 from zodi.exozodi import (
     MAG_1ZODI_V_ARCSEC2,
     MV_SUN,
     T_DUST_K,
-    band_average,
     blackbody_spectral_radiance,
     exozodi_flux_ratio_band,
     exozodi_flux_ratio_v,
@@ -52,6 +45,37 @@ from zodi.zodi import (
     zodi_flux_ratio,
 )
 
+if TYPE_CHECKING:
+    from zodi.amplitude import (
+        AbstractDustAmplitude,
+        DensityDust,
+        LocalZodiMultiple,
+        Passband,
+        ReferenceStar,
+        SurfaceBrightnessDust,
+        Viewing,
+    )
+
+_AMPLITUDE_NAMES = {
+    "AbstractDustAmplitude",
+    "DensityDust",
+    "LocalZodiMultiple",
+    "Passband",
+    "ReferenceStar",
+    "SurfaceBrightnessDust",
+    "Viewing",
+}
+
+
+def __getattr__(name):
+    """Load amplitude records, including optional PyTree registration, on demand."""
+    if name in _AMPLITUDE_NAMES:
+        value = getattr(import_module("zodi.amplitude"), name)
+        globals()[name] = value
+        return value
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
 __all__ = [
     "AYO_DEFAULT_ZODI_MAG_V",
     "MAG_1ZODI_V_ARCSEC2",
@@ -68,7 +92,6 @@ __all__ = [
     "__version__",
     "ab_color_correction",
     "ayo_default_ab_mag",
-    "band_average",
     "blackbody_spectral_radiance",
     "color_correction",
     "exozodi_flux_ratio_band",

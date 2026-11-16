@@ -206,7 +206,7 @@ the two constants are calibrated by fitting the *local* zodi
 wavelength dependence (Table 19) with the Sun as $F_*$. Then
 $f_\lambda$ is the ratio of throughput-weighted bandpass averages
 between the observing band and V
-(`zodi.grey_scatter_intensity`, `zodi.band_average`).
+(evaluate `zodi.grey_scatter_intensity` and average over each bandpass).
 
 Because the model is linear in the two constants, the calibration is a
 closed-form least-squares solve

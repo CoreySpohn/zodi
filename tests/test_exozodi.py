@@ -167,32 +167,11 @@ class TestGreyScatterFit:
         assert np.all(ratio[beyond_uv] < 1.3)
 
 
-class TestBandAverage:
-    def test_constant_spectrum_is_unchanged(self):
-        lam = np.linspace(0.4, 0.7, 31)
-        np.testing.assert_allclose(
-            exozodi.band_average(lam, np.full(31, 2.5), np.ones(31)), 2.5, rtol=1e-12
-        )
-
-    def test_linear_spectrum_flat_throughput_gives_band_center(self):
-        lam = np.linspace(0.4, 0.7, 31)
-        values = 3.0 * lam + 1.0
-        got = exozodi.band_average(lam, values, np.ones(31))
-        np.testing.assert_allclose(got, 3.0 * 0.55 + 1.0, rtol=1e-12)
-
-
 class TestWavelengthUnitGuard:
     def test_nm_value_into_um_argument_raises(self):
         lam_nm = np.linspace(400.0, 900.0, 11)
         with pytest.raises(ValueError, match="um"):
             exozodi.blackbody_spectral_radiance(lam_nm, 261.5)
-        with pytest.raises(ValueError, match="um"):
-            exozodi.band_average(lam_nm, np.ones(11), np.ones(11))
-
-    def test_um_values_pass(self):
-        lam_um = np.linspace(0.4, 0.9, 11)
-        got = exozodi.band_average(lam_um, np.ones(11), np.ones(11))
-        np.testing.assert_allclose(got, 1.0, rtol=1e-12)
 
 
 class TestJez:
@@ -282,3 +261,24 @@ def test_grad_through_grey_scatter_fit():
 
     g = jax.grad(loss)(jnp.asarray(1.0))
     assert np.isfinite(float(g))
+
+
+def test_blackbody_agrees_with_hwoutils(xp):
+    """Fails if Planck units or temperature scaling differ from photon radiance.
+
+    Tolerance basis: floating-point, 2e-12 relative with zero absolute
+    tolerance permits exponent roundoff in the Wien tail (x up to 480).
+    Expected energy radiance is independently converted from hwoutils'
+    photon law, using nm per um to convert the spectral density.
+    """
+    pytest.importorskip("hwoutils")
+    from hwoutils.constants import nm2um, um2nm
+    from hwoutils.conversions import photons_per_nm_per_m2_to_w_per_nm_per_m2
+    from hwoutils.planck import planck_photon_radiance
+
+    wavelength_nm = xp.asarray(np.geomspace(300.0, 30000.0, 31))[:, None]
+    temperature_k = xp.asarray(np.geomspace(100.0, 6000.0, 13))[None, :]
+    photons = planck_photon_radiance(wavelength_nm, temperature_k)
+    expected = photons_per_nm_per_m2_to_w_per_nm_per_m2(photons, wavelength_nm) * um2nm
+    actual = exozodi.blackbody_spectral_radiance(wavelength_nm * nm2um, temperature_k)
+    np.testing.assert_allclose(actual, expected, rtol=2e-12, atol=0)
