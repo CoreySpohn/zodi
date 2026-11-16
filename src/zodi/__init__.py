@@ -15,6 +15,15 @@ spectra, and bandpasses are caller inputs, never package state.
 """
 
 from zodi._version import __version__
+from zodi.amplitude import (
+    AbstractDustAmplitude,
+    DensityDust,
+    LocalZodiMultiple,
+    Passband,
+    ReferenceStar,
+    SurfaceBrightnessDust,
+    Viewing,
+)
 from zodi.exozodi import (
     MAG_1ZODI_V_ARCSEC2,
     MV_SUN,
@@ -49,6 +58,13 @@ __all__ = [
     "MV_SUN",
     "T_DUST_K",
     "V_BAND_WAVELENGTH_NM",
+    "AbstractDustAmplitude",
+    "DensityDust",
+    "LocalZodiMultiple",
+    "Passband",
+    "ReferenceStar",
+    "SurfaceBrightnessDust",
+    "Viewing",
     "__version__",
     "ab_color_correction",
     "ayo_default_ab_mag",
