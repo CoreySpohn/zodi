@@ -79,8 +79,11 @@ radiance = LeinertZodi().photon_radiance(
 Radiance is in photons/s/m2/nm/sr and preserves the wavelength shape.
 `AYOZodi` and `LeinertZodi` expose Table 19 breakpoints through
 `quadrature_knots_nm`; `PrecomputedZodi` exposes its supplied `wavelengths_nm`
-and returns NaN outside their support. The functional JAX helpers are also
-public in `zodi.jax.leinert`.
+and returns NaN outside their support. The core functions, including
+`zodi.specific_intensity` and `zodi.ayo_default_ab_mag`, accept JAX arrays
+directly. Use `zodi.units.AB_ZERO_POINT_JY * zodi.units.mag_to_flux_ratio(mag)`
+for Jy/arcsec2, or scale `zodi.ab_color_correction` by a reference flux to
+construct a spectrum.
 
 Random sampling is deliberately absent from the library: any distribution
 it exposes is a quantile function (inverse CDF), and callers bring uniforms

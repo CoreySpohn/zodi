@@ -4,6 +4,7 @@ import numpy as np
 import pytest
 
 from zodi._interp import interp2d_bilinear_clamped
+from zodi.zodi import ab_color_correction, ayo_default_ab_mag, color_correction
 
 jax = pytest.importorskip("jax")
 jnp = jax.numpy
@@ -51,3 +52,33 @@ def test_grad_matches_central_difference():
     eps = 1e-6
     fd = (_f(55.0 + eps, 42.0) - _f(55.0 - eps, 42.0)) / (2 * eps)
     assert abs(float(g) - float(fd)) / abs(float(fd)) < 1e-6
+
+
+def test_core_color_traces_reference_wavelength_with_scalar_target():
+    """Floating-point basis: 3e-14 for log interpolation, exp and AB color.
+
+    Table 19 gives I(500)=2.6e-6 and I(700)=2.0e-6. Between them,
+    I(ref)=I(500)*(ref/500)**s, s=log(2.0/2.6)/log(700/500).
+    The target/reference power color is (700/ref)**s and AB color adds
+    (700/ref)**2. Their reference derivatives are -s*color/ref and
+    -(s+2)*color/ref. This exercises the scalar-target dispatch boundary.
+    """
+    reference = jnp.array([540.0, 610.0])
+    slope = np.log(2.0 / 2.6) / np.log(700.0 / 500.0)
+    for function, exponent in [
+        (color_correction, slope),
+        (ab_color_correction, slope + 2),
+    ]:
+        traced = lambda ref, function=function: function(700.0, ref)  # noqa: E731
+        expected = (700.0 / np.asarray(reference)) ** exponent
+        np.testing.assert_allclose(jax.jit(traced)(reference), expected, rtol=3e-14)
+        grad = jax.jit(jax.vmap(jax.grad(traced)))(reference)
+        np.testing.assert_allclose(grad, -exponent * expected / reference, rtol=3e-14)
+    expected_mag = 22.0 - 2.5 * (slope + 2) * np.log10(700.0 / reference)
+    np.testing.assert_allclose(
+        jax.jit(lambda ref: ayo_default_ab_mag(700.0, reference_wavelength_nm=ref))(
+            reference
+        ),
+        expected_mag,
+        rtol=3e-14,
+    )

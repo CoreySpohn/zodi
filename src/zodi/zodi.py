@@ -122,7 +122,7 @@ def color_correction(wavelength_nm, reference_wavelength_nm=500.0, photon_units=
     Returns:
         Dimensionless color correction factor.
     """
-    xp = array_namespace(wavelength_nm)
+    xp = array_namespace(wavelength_nm, reference_wavelength_nm)
     factor = _table19_radiance(xp, wavelength_nm) / _table19_radiance(
         xp, reference_wavelength_nm
     )
@@ -176,7 +176,7 @@ def ayo_default_ab_mag(
     Returns:
         AB surface brightness in magnitudes per square arcsecond.
     """
-    xp = array_namespace(wavelength_nm)
+    xp = array_namespace(wavelength_nm, mag_v, reference_wavelength_nm)
     color = ab_color_correction(wavelength_nm, reference_wavelength_nm)
     return mag_v - 2.5 * xp.log10(color)
 
