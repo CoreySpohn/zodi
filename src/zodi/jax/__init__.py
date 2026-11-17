@@ -1,5 +1,6 @@
-"""Equinox local-zodi models; requires the ``zodi[jax]`` extra."""
+"""Equinox zodi and exozodi models; requires the ``zodi[jax]`` extra."""
 
+from zodi.jax.exozodi import AYOExozodi
 from zodi.jax.leinert import (
     ayo_default_zodi_flux_jy,
     ayo_default_zodi_mag,
@@ -12,6 +13,7 @@ from zodi.jax.leinert import (
 from zodi.jax.zodi import AbstractLocalZodi, AYOZodi, LeinertZodi, PrecomputedZodi
 
 __all__ = [
+    "AYOExozodi",
     "AYOZodi",
     "AbstractLocalZodi",
     "LeinertZodi",

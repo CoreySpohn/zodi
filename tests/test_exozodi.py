@@ -272,6 +272,7 @@ def test_blackbody_agrees_with_hwoutils(xp):
     photon law, using nm per um to convert the spectral density.
     """
     pytest.importorskip("hwoutils")
+    pytest.importorskip("jax")
     from hwoutils.constants import nm2um, um2nm
     from hwoutils.conversions import photons_per_nm_per_m2_to_w_per_nm_per_m2
     from hwoutils.planck import planck_photon_radiance
