@@ -53,8 +53,8 @@ Functions compute in the namespace of their array inputs (via
 `array-api-compat`), so numpy callers get numpy in and numpy out with no JAX
 anywhere in their dependency tree, while JAX callers get functions that jit,
 vmap, and differentiate natively. Hard dependencies are `numpy` and
-`array-api-compat` only; the `[jax]` extra adds JAX and Equinox for the
-scene models and JAX array inputs. Importing `zodi` alone does not import
+`array-api-compat` only; the `[jax]` extra adds JAX, Equinox and hwoutils
+for the scene models and JAX array inputs. Importing `zodi` alone does not import
 JAX or Equinox. JAX users should enable float64:
 
 ```python
@@ -77,9 +77,11 @@ radiance = LeinertZodi().photon_radiance(
 ```
 
 Radiance is in photons/s/m2/nm/sr and preserves the wavelength shape.
-`AYOZodi` and `LeinertZodi` expose Table 19 breakpoints through
-`quadrature_knots_nm`; `PrecomputedZodi` exposes its supplied `wavelengths_nm`
-and returns NaN outside their support. The core functions, including
+`spectral_breaks_nm()` returns a NumPy array of breakpoints in nm.
+`AYOZodi` and `LeinertZodi` return the Table 19 wavelengths.
+`PrecomputedZodi` returns its supplied wavelengths and evaluates to NaN
+outside their support. The analytic flat-AB `AYOExozodi` returns an empty array.
+The core functions, including
 `zodi.specific_intensity` and `zodi.ayo_default_ab_mag`, accept JAX arrays
 directly. Use `zodi.units.AB_ZERO_POINT_JY * zodi.units.mag_to_flux_ratio(mag)`
 for Jy/arcsec2, or scale `zodi.ab_color_correction` by a reference flux to

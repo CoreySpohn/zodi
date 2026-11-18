@@ -57,10 +57,14 @@ def test_radiance_contract(kind):
         model = kind(jnp.array([500.0, 550.0, 600.0, 700.0]), jnp.full(4, fixed_v))
         expected = np.full(wave.shape, fixed_v)
     actual = model.photon_radiance(wave, **POINTING)
-    if kind is not PrecomputedZodi:
-        np.testing.assert_array_equal(
-            model.quadrature_knots_nm, TABLE19_WAVELENGTH_UM * 1000
-        )
+    breaks = model.spectral_breaks_nm()
+    assert isinstance(breaks, np.ndarray)
+    expected_breaks = (
+        model.wavelengths_nm
+        if kind is PrecomputedZodi
+        else TABLE19_WAVELENGTH_UM * 1000
+    )
+    np.testing.assert_array_equal(breaks, expected_breaks)
     assert actual.shape == wave.shape
     np.testing.assert_allclose(actual, expected, rtol=3e-14, atol=0)
     if kind is not LeinertZodi:

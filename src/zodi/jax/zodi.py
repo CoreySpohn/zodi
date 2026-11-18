@@ -5,6 +5,8 @@ from typing import final
 
 import equinox as eqx
 import jax.numpy as jnp
+import numpy as np
+from hwoutils.conversions import um_to_nm
 from jax import Array
 
 import zodi
@@ -20,6 +22,10 @@ class AbstractLocalZodi(eqx.Module):
     angles are degrees; solar_longitude_deg is target minus solar longitude
     (helio-ecliptic longitude difference), as in the zodi tables.
     """
+
+    @abstractmethod
+    def spectral_breaks_nm(self) -> np.ndarray:
+        """Return the model's spectral breakpoints in nm as a host array."""
 
     @abstractmethod
     def photon_radiance(
@@ -43,10 +49,9 @@ class AYOZodi(AbstractLocalZodi):
     surface_brightness_mag_arcsec2: float = 22.0
     reference_wavelength_nm: float = 550.0
 
-    @property
-    def quadrature_knots_nm(self):
+    def spectral_breaks_nm(self) -> np.ndarray:
         """Table 19 color breakpoints [nm]; the spectrum is piecewise in them."""
-        return TABLE19_WAVELENGTH_UM * 1000.0
+        return um_to_nm(TABLE19_WAVELENGTH_UM)
 
     def photon_radiance(
         self,
@@ -78,10 +83,9 @@ class LeinertZodi(AbstractLocalZodi):
     22-mag normalization differs slightly from the absolute table value.
     """
 
-    @property
-    def quadrature_knots_nm(self):
+    def spectral_breaks_nm(self) -> np.ndarray:
         """Table 19 color breakpoints [nm]; the spectrum is piecewise in them."""
-        return TABLE19_WAVELENGTH_UM * 1000.0
+        return um_to_nm(TABLE19_WAVELENGTH_UM)
 
     def photon_radiance(
         self,
@@ -118,6 +122,10 @@ class PrecomputedZodi(AbstractLocalZodi):
         """Store a photon radiance table in ph s^-1 m^-2 nm^-1 sr^-1."""
         self.wavelengths_nm = jnp.asarray(wavelengths_nm)
         self.radiance_phot_per_s_m2_nm_sr = jnp.asarray(radiance_phot_per_s_m2_nm_sr)
+
+    def spectral_breaks_nm(self) -> np.ndarray:
+        """Return the tabulated radiance wavelengths in nm on the host."""
+        return np.asarray(self.wavelengths_nm)
 
     def photon_radiance(
         self,

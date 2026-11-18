@@ -2,6 +2,7 @@
 
 import equinox as eqx
 import jax.numpy as jnp
+import numpy as np
 from jax import Array
 
 from zodi.exozodi import MAG_1ZODI_V_ARCSEC2, MV_SUN, exozodi_flux_ratio_v
@@ -34,6 +35,10 @@ class AYOExozodi(eqx.Module):
 
     level_zodis: float | Array = 3.0
     surface_brightness_mag_arcsec2: float | Array = MAG_1ZODI_V_ARCSEC2
+
+    def spectral_breaks_nm(self) -> np.ndarray:
+        """The analytic flat-AB spectrum has no wavelength breaks."""
+        return np.empty(0)
 
     def photon_radiance(
         self, wavelength_nm: float | Array, *, separation_au: float | Array

@@ -15,12 +15,16 @@ def test_analytic_radiance_units():
 
     A 1e-12 relative tolerance allows float64 unit arithmetic.
     """
+    model = AYOExozodi()
+    breaks = model.spectral_breaks_nm()
+    assert isinstance(breaks, np.ndarray)
+    np.testing.assert_array_equal(breaks, np.empty(0))
     waves = jnp.array([450.0, 550.0, 750.0])
     zero_jy = 10 ** (-0.4 * 48.60) * 1e4 / 1e7 / 1e-26
     expected = zero_jy * 1e-26 / (6.62607015e-34 * np.asarray(waves))
     expected *= 3 * 10 ** (-0.4 * 22) / (np.pi / (180 * 3600)) ** 2
     np.testing.assert_allclose(
-        AYOExozodi().photon_radiance(waves, separation_au=1.0),
+        model.photon_radiance(waves, separation_au=1.0),
         expected,
         rtol=1e-12,
         atol=0,
