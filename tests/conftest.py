@@ -7,10 +7,10 @@ import numpy as np
 import pytest
 from hypothesis import settings
 
-# hwoutils is optional so NumPy-only test installs do not acquire JAX.
+# The budget plugin imports JAX, so NumPy-only test installs skip it.
 pytest_plugins = []
 if (
-    importlib.util.find_spec("hwoutils") is not None
+    importlib.util.find_spec("jax") is not None
     and importlib.util.find_spec("hwoutils.testbudget") is not None
 ):
     pytest_plugins.append("hwoutils.testbudget.plugin")

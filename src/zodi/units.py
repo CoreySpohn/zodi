@@ -4,26 +4,20 @@ The zodi and exozodi literature and codes speak four dialects for the same
 quantity: magnitudes per square arcsecond, dimensionless flux ratio per
 square arcsecond (relative to a zero-magnitude flux density), spectral
 radiance in power units, and photon-rate units. This module is the
-conversion table between them, with every constant written out.
+conversion table between them.
 
-Physical constants are the exact SI values (2019 redefinition):
-c = 299792458 m/s, h = 6.62607015e-34 J s. The AB zero point follows the
-Oke & Gunn convention, 10**(23 - 48.6/2.5) Jy, evaluated exactly rather
-than rounded to 3631 Jy.
+Physical constants come from ``hwoutils.constants``: the exact SI values
+(2019 redefinition) and the Oke & Gunn AB zero point, 10**(23 - 48.6/2.5) Jy,
+evaluated exactly rather than rounded to 3631 Jy.
 
 All functions run on numpy or jax inputs (see ``zodi._xp``).
 """
 
-import numpy as np
+from hwoutils import constants as const
 
 from zodi._xp import array_namespace
 
 __all__ = [
-    "AB_ZERO_POINT_JY",
-    "ARCSEC2_PER_SR",
-    "C_M_PER_S",
-    "H_J_S",
-    "KB_J_PER_K",
     "ab_mag_arcsec2_from_intensity",
     "flux_ratio_to_mag",
     "intensity_from_ab_mag_arcsec2",
@@ -32,12 +26,6 @@ __all__ = [
     "photon_ratio_factor",
     "power_to_photon_intensity",
 ]
-
-C_M_PER_S = 299792458.0
-H_J_S = 6.62607015e-34
-KB_J_PER_K = 1.380649e-23
-AB_ZERO_POINT_JY = 10.0 ** (23.0 - 48.6 / 2.5)
-ARCSEC2_PER_SR = float((180.0 / np.pi * 3600.0) ** 2)
 
 
 def mag_to_flux_ratio(mag_arcsec2):
@@ -86,7 +74,7 @@ def power_to_photon_intensity(intensity_w_m2_sr_um, wavelength_nm):
     """
     xp = array_namespace(intensity_w_m2_sr_um, wavelength_nm)
     wavelength_m = xp.asarray(wavelength_nm) * 1e-9
-    photon_energy_j = H_J_S * C_M_PER_S / wavelength_m
+    photon_energy_j = const.h * const.c / wavelength_m
     return xp.asarray(intensity_w_m2_sr_um) / photon_energy_j
 
 
@@ -125,7 +113,7 @@ def intensity_to_mjy_per_sr(intensity_w_m2_sr_um, wavelength_um):
     """
     xp = array_namespace(intensity_w_m2_sr_um, wavelength_um)
     lam = xp.asarray(wavelength_um)
-    return xp.asarray(intensity_w_m2_sr_um) * lam**2 * 1e14 / C_M_PER_S
+    return xp.asarray(intensity_w_m2_sr_um) * lam**2 * 1e14 / const.c
 
 
 def ab_mag_arcsec2_from_intensity(intensity_w_m2_sr_um, wavelength_nm):
@@ -145,9 +133,9 @@ def ab_mag_arcsec2_from_intensity(intensity_w_m2_sr_um, wavelength_nm):
     """
     xp = array_namespace(intensity_w_m2_sr_um, wavelength_nm)
     lam_um = xp.asarray(wavelength_nm) / 1000.0
-    per_arcsec2 = xp.asarray(intensity_w_m2_sr_um) / ARCSEC2_PER_SR
-    flux_jy = per_arcsec2 * lam_um**2 * 1e14 / C_M_PER_S * 1e6
-    return -2.5 * xp.log10(flux_jy / AB_ZERO_POINT_JY)
+    per_arcsec2 = xp.asarray(intensity_w_m2_sr_um) / const.rad2arcsec**2
+    flux_jy = per_arcsec2 * lam_um**2 * 1e14 / const.c * 1e6
+    return -2.5 * xp.log10(flux_jy / const.AB_ZERO_POINT_JY)
 
 
 def intensity_from_ab_mag_arcsec2(mag_arcsec2, wavelength_nm):
@@ -163,6 +151,6 @@ def intensity_from_ab_mag_arcsec2(mag_arcsec2, wavelength_nm):
     """
     xp = array_namespace(mag_arcsec2, wavelength_nm)
     lam_um = xp.asarray(wavelength_nm) / 1000.0
-    flux_jy = AB_ZERO_POINT_JY * 10.0 ** (-0.4 * xp.asarray(mag_arcsec2))
-    per_arcsec2 = flux_jy / 1e6 / (lam_um**2 * 1e14 / C_M_PER_S)
-    return per_arcsec2 * ARCSEC2_PER_SR
+    flux_jy = const.AB_ZERO_POINT_JY * 10.0 ** (-0.4 * xp.asarray(mag_arcsec2))
+    per_arcsec2 = flux_jy / 1e6 / (lam_um**2 * 1e14 / const.c)
+    return per_arcsec2 * const.rad2arcsec**2

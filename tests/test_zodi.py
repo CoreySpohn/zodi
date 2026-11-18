@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from hwoutils import constants as const
 
 from zodi import tables, units, zodi
 
@@ -124,7 +125,7 @@ def test_pinned_against_skyscapes_leinert_x64():
 def test_zodi_flux_ratio_composition():
     f0 = 1.0e10
     intensity_photon = zodi.specific_intensity(90.0, 0.0, 550.0, photon_units=True)
-    expected = intensity_photon / units.ARCSEC2_PER_SR / 1000.0 / f0
+    expected = intensity_photon / const.rad2arcsec**2 / 1000.0 / f0
     got = zodi.zodi_flux_ratio(90.0, 0.0, 550.0, f0)
     np.testing.assert_allclose(got, expected, rtol=1e-14)
 

@@ -18,9 +18,9 @@ class AYOExozodi(eqx.Module):
     At 1 AU, Fexozodi = level_zodis * 10**(-0.4 * brightness), per arcsec^2,
     where brightness is surface_brightness_mag_arcsec2 for one zodi.
     Its denominator is the AB magnitude-zero flux density F0(lambda), from
-    zodi.units.AB_ZERO_POINT_JY, not the host-star flux. Radiance is F0 * Fexozodi
-    divided by arcsec2rad**2 and separation_au**2. There is no host colour,
-    luminosity, or inclination correction. The analytic AB zero point has
+    hwoutils.constants.AB_ZERO_POINT_JY, not the host-star flux. Radiance is
+    F0 * Fexozodi divided by arcsec2rad**2 and separation_au**2. There is no
+    host colour, luminosity, or inclination correction. The analytic AB zero point has
     no table knots; photon colour is 1/lambda (constant F_nu).
 
     One 22-mag/arcsec^2 zodi is 10^-8.8 relative to a magnitude-zero source.

@@ -53,11 +53,11 @@ inclination into [0, 90] deg, with three published models available (see
 """
 
 import numpy as np
+from hwoutils import constants as const
 
 from zodi import tables
 from zodi._interp import interp1d_clamped
 from zodi._xp import array_namespace
-from zodi.units import C_M_PER_S, H_J_S, KB_J_PER_K
 
 __all__ = [
     "MAG_1ZODI_V_ARCSEC2",
@@ -259,8 +259,8 @@ def blackbody_spectral_radiance(wavelength_um, temperature_k):
     _check_wavelength_um(xp, wavelength_um)
     lam_m = xp.asarray(wavelength_um) * 1e-6
     t = xp.asarray(temperature_k)
-    exponent = H_J_S * C_M_PER_S / (lam_m * KB_J_PER_K * t)
-    radiance_per_m = 2.0 * H_J_S * C_M_PER_S**2 / lam_m**5 / xp.expm1(exponent)
+    exponent = const.h * const.c / (lam_m * const.k_B * t)
+    radiance_per_m = 2.0 * const.h * const.c**2 / lam_m**5 / xp.expm1(exponent)
     return radiance_per_m * 1e-6
 
 

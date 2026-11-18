@@ -2,10 +2,10 @@
 
 import numpy as np
 import pytest
+from hwoutils import constants as const
 
 import zodi
 from zodi.tables import TABLE19_WAVELENGTH_UM
-from zodi.units import AB_ZERO_POINT_JY, C_M_PER_S, H_J_S
 
 jax = pytest.importorskip("jax")
 eqx = pytest.importorskip("equinox")
@@ -32,10 +32,10 @@ def test_radiance_contract(kind):
     arcsec_sr = (np.pi / (180 * 3600)) ** 2
     wave = jnp.array([[500.0, 550.0], [600.0, 700.0]])
     fixed_v = (
-        AB_ZERO_POINT_JY
+        const.AB_ZERO_POINT_JY
         * 10 ** (-0.4 * 22)
         * 1e-26
-        / (H_J_S * 550e-9)
+        / (const.h * 550e-9)
         * 1e-9
         / arcsec_sr
     )
@@ -51,7 +51,7 @@ def test_radiance_contract(kind):
     elif kind is LeinertZodi:
         model = kind()
         power = zodi.specific_intensity(120.0, 30.0, np.asarray(wave), anchor="table19")
-        expected = power / (H_J_S * C_M_PER_S / (np.asarray(wave) * 1e-9)) * 1e-3
+        expected = power / (const.h * const.c / (np.asarray(wave) * 1e-9)) * 1e-3
     else:
         assert kind is PrecomputedZodi
         model = kind(jnp.array([500.0, 550.0, 600.0, 700.0]), jnp.full(4, fixed_v))

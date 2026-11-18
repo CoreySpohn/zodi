@@ -1,8 +1,8 @@
 """Unit-conversion arbiter: round trips, pinned values, backend parity."""
 
-import ineedvalidation as vv
 import numpy as np
 import pytest
+from hwoutils import constants as const
 from hypothesis import given
 from hypothesis.strategies import floats
 
@@ -33,7 +33,7 @@ def test_power_to_photon_pinned():
     # 1 W at 500 nm: photon energy h c / lambda = 3.97289e-19 J, so
     # 2.5170582837713546e18 photons per second (exact SI constants)
     got = units.power_to_photon_intensity(1.0, 500.0)
-    expected = 500e-9 / (units.H_J_S * units.C_M_PER_S)
+    expected = 500e-9 / (const.h * const.c)
     np.testing.assert_allclose(got, expected, rtol=1e-12)
     np.testing.assert_allclose(got, 2.5170582837713546e18, rtol=1e-12)
 
@@ -47,14 +47,6 @@ def test_intensity_to_mjy_per_sr_pinned_against_astropy():
 
 def test_photon_ratio_factor():
     np.testing.assert_allclose(units.photon_ratio_factor(1000.0, 500.0), 2.0)
-
-
-def test_ab_zero_point_matches_oke_gunn():
-    np.testing.assert_allclose(units.AB_ZERO_POINT_JY, 3630.7805477010028, rtol=1e-12)
-
-
-def test_arcsec2_per_sr():
-    np.testing.assert_allclose(units.ARCSEC2_PER_SR, 4.254517029615221e10, rtol=1e-12)
 
 
 def test_backend_parity():
@@ -71,27 +63,3 @@ def test_backend_parity():
         b = fn(*(jnp.asarray(x) for x in args))
         # a few ULPs of round-off from transcendental ops and fma fusion
         np.testing.assert_allclose(np.asarray(a), np.asarray(b), rtol=1e-13, atol=0.0)
-
-
-@vv.case("zodi-units", "code-verification")
-def test_constant_copies_and_hwoutils_crosscheck():
-    """Fails if SI or AB constants drift; exact equality is required.
-
-    Tolerance basis: exact-algebra for the four shared declarations;
-    16 float64 eps for reciprocal/square rounding in angular conversions.
-    """
-    pytest.importorskip("hwoutils", reason="optional independent constants cross-check")
-    from hwoutils import constants, conversions
-
-    assert units.C_M_PER_S == constants.c
-    assert units.H_J_S == constants.h
-    assert units.KB_J_PER_K == constants.k_B
-    assert units.AB_ZERO_POINT_JY == constants.AB_ZERO_POINT_JY
-    for reference in (
-        constants.rad2arcsec**2,
-        1.0 / constants.arcsec2rad**2,
-        conversions.jy_per_arcsec2_to_mjy_per_sr(1.0) * 1e6,
-    ):
-        np.testing.assert_allclose(
-            units.ARCSEC2_PER_SR, reference, rtol=16 * np.finfo(float).eps, atol=0
-        )

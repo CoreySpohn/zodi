@@ -24,6 +24,7 @@ edge and near-Sun exclusion cells filled with the nearest tabulated value
 """
 
 import numpy as np
+from hwoutils import constants as const
 
 from zodi import tables, units
 from zodi._interp import interp1d_clamped, interp2d_bilinear_clamped
@@ -258,5 +259,5 @@ def zodi_flux_ratio(dlon_deg, beta_deg, wavelength_nm, f0_ph_s_m2_nm, anchor="ta
     intensity_photon = specific_intensity(
         dlon_deg, beta_deg, wavelength_nm, photon_units=True, anchor=anchor
     )
-    per_arcsec2_per_nm = intensity_photon / units.ARCSEC2_PER_SR / 1000.0
+    per_arcsec2_per_nm = intensity_photon / const.rad2arcsec**2 / 1000.0
     return per_arcsec2_per_nm / xp.asarray(f0_ph_s_m2_nm)
