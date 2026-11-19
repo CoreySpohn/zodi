@@ -24,7 +24,7 @@ Repository = "https://github.com/CoreySpohn/zodi"
 Documentation = "https://zodi.readthedocs.io"
 
 [project.optional-dependencies]
-jax = ["hwoutils", "jax>=0.4.33", "jaxlib>=0.4.33", "equinox>=0.13.2"]
+jax = ["hwoutils>=2.0.0", "jax>=0.4.33", "jaxlib>=0.4.33", "equinox>=0.13.2"]
 dev = ["pre-commit>=3.5"]
 test = [
     "pytest>=8.0",
