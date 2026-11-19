@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.0.0](https://github.com/CoreySpohn/zodi/compare/v1.1.0...v2.0.0) (2026-11-19)
+
+
+### ⚠ BREAKING CHANGES
+
+* declare zodiacal and exozodiacal spectral breaks through the hwoutils protocol
+* delete the zodi.jax Leinert wrappers; models and callers use the core functions
+* zodi owns its Equinox local-zodi models under zodi.jax and drops the unused band rules
+
+### Features
+
+* declare zodiacal and exozodiacal spectral breaks through the hwoutils protocol ([66a829b](https://github.com/CoreySpohn/zodi/commit/66a829b852fb106a7900d6900471f8af0098442b))
+* typed dust amplitude records for the three meanings of one zodi ([6de44a8](https://github.com/CoreySpohn/zodi/commit/6de44a8e7fc4f9aa5729662dc33b9dbebc55bee4))
+* zodi owns its Equinox local-zodi models under zodi.jax and drops the unused band rules ([906b651](https://github.com/CoreySpohn/zodi/commit/906b651342257bbbeb8f2827cf3720185dce066f))
+* zodi.jax owns the analytic AYO exozodi model ([a4151af](https://github.com/CoreySpohn/zodi/commit/a4151afcc7d70a2086e3d450d55edbf832c93077))
+
+
+### Code Refactoring
+
+* delete the zodi.jax Leinert wrappers; models and callers use the core functions ([47a979e](https://github.com/CoreySpohn/zodi/commit/47a979e55d6be09e6a4b89f8d5385fb1271a7294))
+
 ## [1.1.0](https://github.com/CoreySpohn/zodi/compare/v1.0.0...v1.1.0) (2026-11-12)
 
 
