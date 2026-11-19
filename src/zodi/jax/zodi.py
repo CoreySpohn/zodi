@@ -19,7 +19,7 @@ class AbstractLocalZodi(eqx.Module):
     """Local background radiance in ph s^-1 m^-2 nm^-1 sr^-1.
 
     Every implementation preserves the wavelength array's shape. Pointing
-    angles are degrees; solar_longitude_deg is target minus solar longitude
+    angles are degrees; helioecliptic_longitude_deg is target minus solar longitude
     (helio-ecliptic longitude difference), as in the zodi tables.
 
     Attributes:
@@ -40,7 +40,7 @@ class AbstractLocalZodi(eqx.Module):
         wavelength_nm: Array,
         *,
         ecliptic_latitude_deg: Array,
-        solar_longitude_deg: Array,
+        helioecliptic_longitude_deg: Array,
     ) -> Array:
         """Evaluate photon radiance at wavelengths in nm, without integration."""
 
@@ -67,7 +67,7 @@ class AYOZodi(AbstractLocalZodi):
         wavelength_nm: Array,
         *,
         ecliptic_latitude_deg: Array,
-        solar_longitude_deg: Array,
+        helioecliptic_longitude_deg: Array,
     ) -> Array:
         """Photon radiance per sr; pointing is ignored, wavelength-shaped."""
         wave = jnp.asarray(wavelength_nm)
@@ -103,12 +103,12 @@ class LeinertZodi(AbstractLocalZodi):
         wavelength_nm: Array,
         *,
         ecliptic_latitude_deg: Array,
-        solar_longitude_deg: Array,
+        helioecliptic_longitude_deg: Array,
     ) -> Array:
         """Photon radiance per sr, converted from zodi's per-micron output."""
         return (
             zodi.specific_intensity(
-                jnp.asarray(solar_longitude_deg),
+                jnp.asarray(helioecliptic_longitude_deg),
                 jnp.asarray(ecliptic_latitude_deg),
                 jnp.asarray(wavelength_nm),
                 photon_units=True,
@@ -145,7 +145,7 @@ class PrecomputedZodi(AbstractLocalZodi):
         wavelength_nm: Array,
         *,
         ecliptic_latitude_deg: Array,
-        solar_longitude_deg: Array,
+        helioecliptic_longitude_deg: Array,
     ) -> Array:
         """Photon radiance per sr; pointing is ignored, wavelength-shaped."""
         wave = jnp.asarray(wavelength_nm)

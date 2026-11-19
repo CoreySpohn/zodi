@@ -112,7 +112,7 @@ def test_local_pointing_order_and_exact_multiple(lon, lat, cell):
     dust = LocalZodiMultiple(
         level=np.array([1.0, 3.0]),
         ecliptic_latitude_deg=lat,
-        solar_longitude_deg=lon,
+        helioecliptic_longitude_deg=lon,
     )
     wavelength = np.array([500.0, 910.0])
     np.testing.assert_array_equal(
@@ -156,8 +156,12 @@ def test_static_metadata_validation(kind):
         ),
         "local": (
             LocalZodiMultiple,
-            dict(level=1, ecliptic_latitude_deg=30.0, solar_longitude_deg=90.0),
-            ["ecliptic_latitude_deg", "solar_longitude_deg", "reference_radius_au"],
+            dict(level=1, ecliptic_latitude_deg=30.0, helioecliptic_longitude_deg=90.0),
+            [
+                "ecliptic_latitude_deg",
+                "helioecliptic_longitude_deg",
+                "reference_radius_au",
+            ],
         ),
         "density": (
             DensityDust,
@@ -216,7 +220,9 @@ def test_frozen_value_metadata_and_density_boundary():
     assert first != dataclasses.replace(first, calibration_id="different")
     assert first != dataclasses.replace(first, level=4)
     density = DensityDust(level=3, profile_id="flat", calibration_id="profile-v1")
-    local = LocalZodiMultiple(level=3, ecliptic_latitude_deg=30, solar_longitude_deg=90)
+    local = LocalZodiMultiple(
+        level=3, ecliptic_latitude_deg=30, helioecliptic_longitude_deg=90
+    )
     for record in (first, density, local):
         assert record == dataclasses.replace(record)
         assert hash(record) == hash(dataclasses.replace(record))
@@ -252,7 +258,7 @@ def test_jax_level_transforms_and_value_based_trace_cache(kind):
         dust = LocalZodiMultiple(
             level=jnp.asarray(3.0),
             ecliptic_latitude_deg=30,
-            solar_longitude_deg=90,
+            helioecliptic_longitude_deg=90,
         )
 
         def evaluate(record):

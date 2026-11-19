@@ -31,7 +31,7 @@ def main():
         jax.jit(model.photon_radiance)(
             jnp.asarray(wave),
             ecliptic_latitude_deg=jnp.asarray(lat),
-            solar_longitude_deg=jnp.asarray(lon),
+            helioecliptic_longitude_deg=jnp.asarray(lon),
         )
     )
     model_power = actual * 1000.0 / power_to_photon_intensity(np.ones_like(wave), wave)

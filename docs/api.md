@@ -37,10 +37,10 @@ The inverse-square law is evaluated in AU; reference radius and viewing label
 the calibration and do not add radius or inclination corrections. Custom bands
 require a matching reference-star magnitude and surface-brightness calibration.
 
-`LocalZodiMultiple(level=3, ecliptic_latitude_deg=30, solar_longitude_deg=90)`
+`LocalZodiMultiple(level=3, ecliptic_latitude_deg=30, helioecliptic_longitude_deg=90)`
 uses `calibration_id="leinert-1998-table17"`. Its
 `specific_intensity(wavelength_nm)` returns W m-2 sr-1 um-1 with the existing
-Table 17 anchoring. `solar_longitude_deg` means target longitude minus solar
+Table 17 anchoring. `helioecliptic_longitude_deg` means target longitude minus solar
 longitude, matching `dlon_deg`; latitude matches `beta_deg`. The existing
 absolute-value symmetry and edge clamping apply.
 

@@ -18,7 +18,7 @@ from zodi.jax import (  # noqa: E402
     PrecomputedZodi,
 )
 
-POINTING = dict(ecliptic_latitude_deg=30.0, solar_longitude_deg=120.0)
+POINTING = dict(ecliptic_latitude_deg=30.0, helioecliptic_longitude_deg=120.0)
 
 
 @pytest.mark.parametrize("kind", AbstractLocalZodi.__subclasses__())
@@ -71,7 +71,7 @@ def test_radiance_contract(kind):
         np.testing.assert_array_equal(
             actual,
             model.photon_radiance(
-                wave, ecliptic_latitude_deg=75.0, solar_longitude_deg=90.0
+                wave, ecliptic_latitude_deg=75.0, helioecliptic_longitude_deg=90.0
             ),
         )
 
@@ -98,7 +98,7 @@ def test_pointing_order_and_radiance_units():
         model.photon_radiance(wave, **POINTING), expected, rtol=3e-14, atol=0
     )
     assert np.all(np.abs(np.asarray(expected / swapped) - 1) > 0.1)
-    pointing = dict(ecliptic_latitude_deg=0.0, solar_longitude_deg=90.0)
+    pointing = dict(ecliptic_latitude_deg=0.0, helioecliptic_longitude_deg=90.0)
     mag = zodi.surface_brightness_ab_mag(
         jnp.array(90.0), jnp.array(0.0), jnp.array(550.0), anchor="table19"
     )

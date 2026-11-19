@@ -72,7 +72,7 @@ from zodi.jax import LeinertZodi
 radiance = LeinertZodi().photon_radiance(
     jnp.array([500.0, 550.0, 700.0]),
     ecliptic_latitude_deg=30.0,
-    solar_longitude_deg=120.0,
+    helioecliptic_longitude_deg=120.0,
 )
 ```
 

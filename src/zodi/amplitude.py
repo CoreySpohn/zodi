@@ -251,7 +251,7 @@ class SurfaceBrightnessDust(AbstractDustAmplitude):
 class LocalZodiMultiple(AbstractDustAmplitude):
     """Multiplier of local zodiacal surface brightness at a fixed pointing.
 
-    ``solar_longitude_deg`` is the helio-ecliptic longitude difference,
+    ``helioecliptic_longitude_deg`` is the helio-ecliptic longitude difference,
     target longitude minus solar longitude (``dlon_deg`` in the local-zodi
     functions), not an absolute solar longitude. ``ecliptic_latitude_deg``
     is ``beta_deg``. Both follow the existing absolute-value symmetry and
@@ -262,13 +262,13 @@ class LocalZodiMultiple(AbstractDustAmplitude):
     family: ClassVar[str] = "local-zodi-multiple"
     calibration_id: str = "leinert-1998-table17"
     ecliptic_latitude_deg: float
-    solar_longitude_deg: float
+    helioecliptic_longitude_deg: float
 
     def __post_init__(self):
         """Validate static pointing angles."""
         super().__post_init__()
         _host_float(self, "ecliptic_latitude_deg")
-        _host_float(self, "solar_longitude_deg")
+        _host_float(self, "helioecliptic_longitude_deg")
 
     def specific_intensity(self, wavelength_nm):
         """Return level times local intensity in W m-2 sr-1 um-1.
@@ -278,7 +278,7 @@ class LocalZodiMultiple(AbstractDustAmplitude):
         """
         xp = array_namespace(self.level, wavelength_nm)
         return xp.asarray(self.level) * specific_intensity(
-            xp.asarray(self.solar_longitude_deg),
+            xp.asarray(self.helioecliptic_longitude_deg),
             xp.asarray(self.ecliptic_latitude_deg),
             xp.asarray(wavelength_nm),
         )
