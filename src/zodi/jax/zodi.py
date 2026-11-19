@@ -1,7 +1,7 @@
 """Local zodiacal photon radiance, with physics delegated to zodi."""
 
 from abc import abstractmethod
-from typing import final
+from typing import ClassVar, final
 
 import equinox as eqx
 import jax.numpy as jnp
@@ -21,7 +21,14 @@ class AbstractLocalZodi(eqx.Module):
     Every implementation preserves the wavelength array's shape. Pointing
     angles are degrees; solar_longitude_deg is target minus solar longitude
     (helio-ecliptic longitude difference), as in the zodi tables.
+
+    Attributes:
+        uses_pointing: Whether the radiance depends on the pointing keywords.
+            Static, so a caller can refuse a target with no sky position before
+            tracing.
     """
+
+    uses_pointing: eqx.AbstractClassVar[bool]
 
     @abstractmethod
     def spectral_breaks_nm(self) -> np.ndarray:
@@ -45,6 +52,8 @@ class AYOZodi(AbstractLocalZodi):
     Both pointing keywords are accepted and ignored. The reference magnitude
     parameter sets the fixed apparent brightness; zodi owns the color model.
     """
+
+    uses_pointing: ClassVar[bool] = False
 
     surface_brightness_mag_arcsec2: float = 22.0
     reference_wavelength_nm: float = 550.0
@@ -83,6 +92,8 @@ class LeinertZodi(AbstractLocalZodi):
     22-mag normalization differs slightly from the absolute table value.
     """
 
+    uses_pointing: ClassVar[bool] = True
+
     def spectral_breaks_nm(self) -> np.ndarray:
         """Table 19 color breakpoints [nm]; the spectrum is piecewise in them."""
         return um_to_nm(TABLE19_WAVELENGTH_UM)
@@ -114,6 +125,8 @@ class PrecomputedZodi(AbstractLocalZodi):
     Both pointing keywords are accepted and ignored. Values outside the
     supplied wavelength support are NaN.
     """
+
+    uses_pointing: ClassVar[bool] = False
 
     wavelengths_nm: Array = eqx.field(converter=jnp.asarray)
     radiance_phot_per_s_m2_nm_sr: Array = eqx.field(converter=jnp.asarray)

@@ -143,3 +143,14 @@ def test_precomputed_interpolation_and_support():
     actual = eqx.filter_jit(model.photon_radiance)(wave, **POINTING)
     np.testing.assert_allclose(actual, expected, rtol=0, atol=0, equal_nan=True)
     assert model.photon_radiance(jnp.array(450.0), **POINTING) == 800.0
+
+
+def test_uses_pointing_marks_the_models_that_read_the_sightline():
+    """Only Leinert reads the pointing keywords; the flag says so statically.
+
+    Fails if a caller cannot tell, before tracing, that a target with no sky
+    position is unusable with a model. Exact.
+    """
+    assert LeinertZodi.uses_pointing is True
+    assert AYOZodi.uses_pointing is False
+    assert PrecomputedZodi.uses_pointing is False
