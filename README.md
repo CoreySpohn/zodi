@@ -11,6 +11,8 @@
 Zodiacal and exozodiacal light brightness conventions for exoplanet imaging,
 from a single source that runs on numpy and JAX.
 
+zodi is experimental: its API may change between major versions.
+
 ## What it owns
 
 - Local zodiacal light surface brightness: the Leinert et al. (1998)
