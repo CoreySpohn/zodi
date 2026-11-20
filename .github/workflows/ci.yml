@@ -36,7 +36,7 @@ env:
 
 jobs:
   quick:
-    name: Quick tier (${{ matrix.extras }}, py${{ matrix.python-version }}, ${{ matrix.platform }})
+    name: Quick tier (${{ matrix.backend }}, py${{ matrix.python-version }}, ${{ matrix.platform }})
     if: github.event_name != 'schedule' && (github.event_name != 'workflow_dispatch' || inputs.tier != 'slow')
     runs-on: ${{ matrix.platform }}
     timeout-minutes: 20
@@ -45,7 +45,7 @@ jobs:
       matrix:
         python-version: ["3.12"]
         platform: [ubuntu-latest, macos-latest]
-        extras: ["test", "test,jax"]
+        backend: ["numpy", "jax"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -61,10 +61,10 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .jax_cache
-          key: jax-${{ runner.os }}-${{ matrix.extras == 'test' && 'test' || 'test-jax' }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
+          key: jax-${{ runner.os }}-${{ matrix.backend }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-${{ github.sha }}
           restore-keys: |
-            jax-${{ runner.os }}-${{ matrix.extras == 'test' && 'test' || 'test-jax' }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-
-            jax-${{ runner.os }}-${{ matrix.extras == 'test' && 'test' || 'test-jax' }}-py${{ matrix.python-version }}-
+            jax-${{ runner.os }}-${{ matrix.backend }}-py${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}-
+            jax-${{ runner.os }}-${{ matrix.backend }}-py${{ matrix.python-version }}-
 
       - name: Install the package and test tools
         run: |
@@ -72,11 +72,11 @@ jobs:
           echo "VIRTUAL_ENV=$PWD/.venv" >> "$GITHUB_ENV"
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
           # One resolve, so pinned siblings satisfy the package floors.
-          uv pip install --python .venv/bin/python -e ".[${{ matrix.extras }}]" --override .github/sibling-pins.txt ruff==0.17.3 deptry ty==0.0.96
+          uv pip install --python .venv/bin/python -e ".[test]" ${{ matrix.backend == 'jax' && 'jax>=0.4.33 jaxlib>=0.4.33' || '' }} --override .github/sibling-pins.txt ruff==0.17.3 deptry ty==0.0.96
 
       # NumPy consumers must not inherit JAX through the test extra.
       - name: Prove the core install carries no jax
-        if: matrix.extras == 'test'
+        if: matrix.backend == 'numpy'
         run: python -c "import importlib.util; assert importlib.util.find_spec('jax') is None"
 
       - name: Lint and formatting
@@ -102,7 +102,7 @@ jobs:
         if: always()
         # The NumPy-only leg intentionally skips tests requiring the optional JAX backend.
         env:
-          ALLOW_SKIPS: ${{ matrix.extras == 'test' && '--allow-skips' || '' }}
+          ALLOW_SKIPS: ${{ matrix.backend == 'numpy' && '--allow-skips' || '' }}
         run: python .github/scripts/ci_summary.py junit-quick.xml --title "Quick tier" --budget-seconds 600 $ALLOW_SKIPS
 
   docs:
@@ -181,7 +181,7 @@ jobs:
           uv venv .venv --python 3.12
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
           # One resolve, so pinned siblings satisfy the package floors.
-          uv pip install --python .venv/bin/python -e ".[test,jax]" --override .github/sibling-pins.txt
+          uv pip install --python .venv/bin/python -e ".[test]" jax jaxlib --override .github/sibling-pins.txt
 
       - name: Slow tier (hypothesis nightly profile)
         env:

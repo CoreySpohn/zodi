@@ -42,7 +42,7 @@ jobs:
           uv venv "$RUNNER_TEMP/venv" --python 3.12
           echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
-          uv pip install --python "$RUNNER_TEMP/venv/bin/python" -e ".[test,jax]" --override .github/sibling-pins.txt
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" -e ".[test]" jax jaxlib --override .github/sibling-pins.txt
           uv pip install --python "$RUNNER_TEMP/venv/bin/python" --upgrade --prerelease=allow \
             jax jaxlib numpy scipy astropy --override .github/sibling-pins.txt
           # Nightly-only index verified against the JAX installation docs:
@@ -60,13 +60,13 @@ jobs:
           done
 
   lowest-direct:
-    name: Lowest direct dependencies (${{ matrix.extras }}, py3.12)
+    name: Lowest direct dependencies (${{ matrix.backend }}, py3.12)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        extras: ["test", "test,jax"]
+        backend: ["numpy", "jax"]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -83,11 +83,11 @@ jobs:
           uv venv "$RUNNER_TEMP/venv" --python 3.12
           echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
-          uv pip install --python "$RUNNER_TEMP/venv/bin/python" --resolution lowest-direct -e ".[${{ matrix.extras }}]" --override .github/sibling-pins.txt
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" --resolution lowest-direct -e ".[test]" ${{ matrix.backend == 'jax' && 'jax>=0.4.33 jaxlib>=0.4.33' || '' }} --override .github/sibling-pins.txt
           uv pip freeze --python "$RUNNER_TEMP/venv/bin/python"
 
       - name: Prove the core install carries no jax
-        if: matrix.extras == 'test'
+        if: matrix.backend == 'numpy'
         run: python -c "import importlib.util; assert importlib.util.find_spec('jax') is None"
 
       - name: Quick tier
@@ -96,7 +96,7 @@ jobs:
             status=0
             pytest -q -p no:cacheprovider "$test_file" -m "not slow" || status=$?
             # The JAX-only module skips at collection in the NumPy-only install.
-            if [ "$status" -eq 5 ] && [ "${{ matrix.extras }}" = "test" ] && \
+            if [ "$status" -eq 5 ] && [ "${{ matrix.backend }}" = "numpy" ] && \
               [ "$test_file" = "tests/test_jax_transforms.py" ]; then
               continue
             fi

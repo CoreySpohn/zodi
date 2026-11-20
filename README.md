@@ -32,8 +32,6 @@ zodi is experimental: its API may change between major versions.
 - Unit conversions between the dialects in common use: magnitudes per
   square arcsecond, flux ratio per square arcsecond, spectral radiance,
   photon rates, and MJy per steradian (`zodi.units`).
-- Equinox local-background models (`zodi.jax`): `AYOZodi`, `LeinertZodi`,
-  and `PrecomputedZodi`, sharing the `AbstractLocalZodi` interface.
 
 ## Documentation and evidence
 
@@ -55,9 +53,9 @@ Functions compute in the namespace of their array inputs (via
 `array-api-compat`), so numpy callers get numpy in and numpy out with no JAX
 anywhere in their dependency tree, while JAX callers get functions that jit,
 vmap, and differentiate natively. Hard dependencies are `numpy`,
-`array-api-compat` and the NumPy-only core of `hwoutils` (constants); the `[jax]`
-extra adds JAX, Equinox and `hwoutils[jax]` for the scene models and JAX array inputs. Importing `zodi` alone does not import
-JAX or Equinox. JAX users should enable float64:
+`array-api-compat` and the NumPy-only core of `hwoutils` (constants). Importing
+`zodi` alone does not import JAX; install JAX yourself to pass it JAX arrays.
+JAX users should enable float64:
 
 ```python
 import jax
@@ -65,27 +63,26 @@ import jax
 jax.config.update("jax_enable_x64", True)
 ```
 
-The optional scene models evaluate the same namespace-generic physics:
+The same functions evaluate a sightline directly:
 
 ```python
 import jax.numpy as jnp
-from zodi.jax import LeinertZodi
+import zodi
 
-radiance = LeinertZodi().photon_radiance(
+radiance = zodi.specific_intensity(
+    120.0,
+    30.0,
     jnp.array([500.0, 550.0, 700.0]),
-    ecliptic_latitude_deg=30.0,
-    helioecliptic_longitude_deg=120.0,
+    photon_units=True,
+    anchor="table19",
 )
 ```
 
-Radiance is in photons/s/m2/nm/sr and preserves the wavelength shape.
-`spectral_breaks_nm()` returns a NumPy array of breakpoints in nm.
-`AYOZodi` and `LeinertZodi` return the Table 19 wavelengths.
-`PrecomputedZodi` returns its supplied wavelengths and evaluates to NaN
-outside their support. The analytic flat-AB `AYOExozodi` returns an empty array.
-The core functions, including
-`zodi.specific_intensity` and `zodi.ayo_default_ab_mag`, accept JAX arrays
-directly. Use `hwoutils.constants.AB_ZERO_POINT_JY * zodi.units.mag_to_flux_ratio(mag)`
+The arguments are the helioecliptic longitude and the ecliptic latitude in
+degrees and the wavelengths in nm. The equinox scene models that wrap these
+functions (`AYOZodi`, `LeinertZodi`, `PrecomputedZodi`, the analytic AYO
+exozodi) live in skyscapes. Use
+`hwoutils.constants.AB_ZERO_POINT_JY * zodi.units.mag_to_flux_ratio(mag)`
 for Jy/arcsec2, or scale `zodi.ab_color_correction` by a reference flux to
 construct a spectrum.
 
@@ -107,9 +104,9 @@ reflected-light brightness conventions used in exoplanet direct imaging.
 pip install zodi
 ```
 
-The hard dependencies are `numpy` and `array-api-compat`. For the Equinox
-models, install `zodi[jax]`. To also run the test suite, install:
+The hard dependencies are `numpy` and `array-api-compat`. To also run the test
+suite, install:
 
 ```
-pip install "zodi[jax,test]"
+pip install "zodi[test]" jax
 ```

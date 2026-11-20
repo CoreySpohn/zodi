@@ -31,7 +31,7 @@ Numbers below are from 2026-07 on linux x86-64, float64, unless noted.
 ## Running the cross-code scripts
 
 ```
-python scripts/validate_against_skyscapes.py    # needs skyscapes + jax
+python scripts/validate_against_skyscapes.py    # needs skyscapes, orbix and jax
 python scripts/validate_against_exosims.py      # needs EXOSIMS
 python scripts/validate_against_zodipy.py zodi > rows.json
 uv run --no-project --with zodipy \
