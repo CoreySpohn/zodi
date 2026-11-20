@@ -11,7 +11,7 @@ readme = "README.md"
 requires-python = ">=3.12"
 license = { file = "LICENSE" }
 classifiers = [
-    "Development Status :: 4 - Beta",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
@@ -24,7 +24,7 @@ Repository = "https://github.com/CoreySpohn/zodi"
 Documentation = "https://zodi.readthedocs.io"
 
 [project.optional-dependencies]
-jax = ["hwoutils[jax]", "jax>=0.4.33", "jaxlib>=0.4.33", "equinox>=0.13.2"]
+jax = ["hwoutils[jax]>=2.0.0", "jax>=0.4.33", "jaxlib>=0.4.33", "equinox>=0.13.2"]
 dev = ["pre-commit>=3.5"]
 test = [
     "pytest>=8.0",

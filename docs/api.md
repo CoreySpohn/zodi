@@ -21,9 +21,9 @@ constant. Shared metadata are `reference_star`, `reference_radius_au` (AU or
 is a PyTree child when JAX is installed; metadata compare by value for tracing.
 
 `SurfaceBrightnessDust(level=3)` uses `calibration_id="stark-2014"`,
-`reference_radius_au="eeid"`, and `luminosity_rule="band"`. It provides:
+`reference_radius_au="eeid"`, and `luminosity_rule="band"`. It provides (signatures only, not executed):
 
-```python
+```python notest
 flux_ratio(*, host_band_abs_mag, host_luminosity_lsun, r_au)
 at_eeid(*, host_band_abs_mag, host_luminosity_lsun)
 mag_per_arcsec2_at(*, host_band_abs_mag, host_luminosity_lsun, r_au)
