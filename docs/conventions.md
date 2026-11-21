@@ -250,7 +250,7 @@ $I$ into $[0^\circ, 90^\circ]$), matching `EXOSIMS.calc_fbeta`
 | EXOSIMS | `JEZ0` | ph s$^{-1}$ m$^{-2}$ arcsec$^{-2}$ | `jez0` + `scale_jez` |
 | pyEDITH | exozodi flux | flux ratio arcsec$^{-2}$ via stellar color | `exozodi_flux_ratio_band` |
 | jaxedith | `Fzodi`, `Fexozodi` | flux ratio arcsec$^{-2}$, AB-referenced | `mag_to_flux_ratio` of `surface_brightness_ab_mag` |
-| skyscapes | spectral radiance / mag | W m$^{-2}$ sr$^{-1}$ um$^{-1}$; AB mag arcsec$^{-2}$ | `specific_intensity(anchor="table19")` |
+| skyscapes (`LeinertZodi`) | spectral radiance / mag | W m$^{-2}$ sr$^{-1}$ um$^{-1}$; AB mag arcsec$^{-2}$ | `specific_intensity(anchor="table19")` |
 | zodipy | emission | MJy sr$^{-1}$ | `units.intensity_to_mjy_per_sr` |
 
 ## 5. Open cross-code questions for maintainers
