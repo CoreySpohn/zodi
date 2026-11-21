@@ -79,6 +79,12 @@ slow_s = 300
 known_first_party = ["zodi"]
 optional_dependencies_dev_groups = ["dev", "docs", "test"]
 
+[tool.deptry.per_rule_ignores]
+# jax is an optional import: zodi registers pytree nodes only when the user has installed it,
+# so it is deliberately not declared (missing in the numpy leg, transitive in the jax leg).
+DEP001 = ["jax"]
+DEP003 = ["jax"]
+
 [tool.ty.environment]
 python-version = "3.11"
 
