@@ -125,6 +125,7 @@ class TestBlackbody:
 
 
 class TestGreyScatterFit:
+    @pytest.mark.float64_only(reason="recovery of fitted grey-scatter coefficients")
     def test_closed_form_fit_recovers_synthetic_constants(self):
         lam = np.geomspace(0.2, 100.0, 40)
         star = 1e3 * lam**-2
@@ -140,6 +141,7 @@ class TestGreyScatterFit:
         got = exozodi.grey_scatter_intensity(lam, star, 1.0, 0.0)
         np.testing.assert_allclose(got, [1.0, 1.0, 0.0])
 
+    @pytest.mark.float64_only(reason="grey-scatter calibration to Leinert Table 19")
     def test_table19_calibration_with_blackbody_sun_proxy(self):
         # reproduces the EXOSIMS calibration procedure with a 5772 K
         # blackbody standing in for the solar spectrum; the real-spectrum

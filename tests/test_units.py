@@ -38,6 +38,7 @@ def test_power_to_photon_pinned():
     np.testing.assert_allclose(got, 2.5170582837713546e18, rtol=1e-12)
 
 
+@pytest.mark.float64_only(reason="Astropy spectral-density cross-code reference value")
 def test_intensity_to_mjy_per_sr_pinned_against_astropy():
     # astropy 7.2.2 reference: (1 W m-2 um-1).to(MJy,
     # spectral_density(1.25 um)) = 521193.89874711254
