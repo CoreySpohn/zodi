@@ -108,6 +108,7 @@ def test_specific_intensity_table19_anchor_reproduces_reference_spectrum():
     np.testing.assert_allclose(got, 8.1e-7, rtol=1e-12)
 
 
+@pytest.mark.float64_only(reason="Skyscapes Leinert cross-code reference values")
 def test_pinned_against_skyscapes_leinert_x64():
     # References computed from skyscapes.background.leinert under jax x64
     # (same tables, same linear log-log interpolation, same AB zero point):

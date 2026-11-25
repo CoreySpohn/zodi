@@ -61,6 +61,8 @@ version-file = "src/zodi/_version.py"
 packages = ["src/zodi"]
 
 [tool.pytest.ini_options]
+addopts = "-p hwoutils.testing.precision"
+default_precision = "float32"
 filterwarnings = ["error"]
 testpaths = ["tests"]
 markers = [

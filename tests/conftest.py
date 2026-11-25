@@ -27,9 +27,6 @@ settings.load_profile(os.environ.get("HYPOTHESIS_PROFILE", "quick"))
 BACKENDS = [pytest.param(np, id="numpy")]
 
 try:  # jax is optional; the suite must pass without it
-    import jax
-
-    jax.config.update("jax_enable_x64", True)
     import jax.numpy as jnp
 
     BACKENDS.append(pytest.param(jnp, id="jax"))

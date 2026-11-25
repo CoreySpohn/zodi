@@ -1,3 +1,5 @@
 # Unreleased sibling libraries, applied as uv overrides so each is installed at a pinned main
 # commit whatever version bounds other packages declare (a breaking change waiting for its
 # release tag reports the old major version). Move a pin deliberately; drop it once PyPI covers it.
+# Provides the precision-lane pytest plugin without requiring the optional JAX extra.
+hwoutils @ git+https://github.com/CoreySpohn/hwoutils.git@328aa0d417dabbdabd1b9c193e85a6c9e8a3a912
