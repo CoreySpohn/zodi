@@ -239,8 +239,10 @@ def test_frozen_value_metadata_and_density_boundary():
 def test_jax_level_transforms_and_value_based_trace_cache(kind):
     """Fails if metadata become leaves, cache by identity, or levels detach.
 
-    Tolerance basis: floating-point, 64 float64 eps for XLA fusion and
-    transcendental roundoff; zero absolute tolerance, including gradients.
+    Floating-point basis: 16 eps at the level dtype cover the band path
+    (magnitude subtraction, scaled power, radius square and flux products),
+    including the sqrt or log conversion and rounding on both evaluations.
+    The local derivative samples a table knot with unit color.
     Analytic derivatives of the linear level scaling are independent of AD.
     """
     jax = pytest.importorskip("jax", reason="JAX is an optional array backend")
@@ -283,7 +285,9 @@ def test_jax_level_transforms_and_value_based_trace_cache(kind):
         traces.append(None)
         return evaluate(record)
 
-    tolerance = 64 * np.finfo(float).eps
+    from hwoutils.numerics import eps
+
+    tolerance = 16 * eps(dust.level.dtype)
     eager = evaluate(dust)
     assert isinstance(eager, jax.Array)
     np.testing.assert_allclose(compiled(dust), eager, rtol=tolerance, atol=0)

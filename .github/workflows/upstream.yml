@@ -42,7 +42,7 @@ jobs:
           uv venv "$RUNNER_TEMP/venv" --python 3.12
           echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
-          uv pip install --python "$RUNNER_TEMP/venv/bin/python" -e ".[test]" jax jaxlib --override .github/sibling-pins.txt
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" -e ".[test-jax]" --override .github/sibling-pins.txt
           uv pip install --python "$RUNNER_TEMP/venv/bin/python" --upgrade --prerelease=allow \
             jax jaxlib numpy scipy astropy --override .github/sibling-pins.txt
           # Nightly-only index verified against the JAX installation docs:
@@ -83,7 +83,7 @@ jobs:
           uv venv "$RUNNER_TEMP/venv" --python 3.12
           echo "VIRTUAL_ENV=$RUNNER_TEMP/venv" >> "$GITHUB_ENV"
           echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
-          uv pip install --python "$RUNNER_TEMP/venv/bin/python" --resolution lowest-direct -e ".[test]" ${{ matrix.backend == 'jax' && 'jax>=0.4.33 jaxlib>=0.4.33' || '' }} --override .github/sibling-pins.txt
+          uv pip install --python "$RUNNER_TEMP/venv/bin/python" --resolution lowest-direct -e ".[${{ matrix.backend == 'jax' && 'test-jax' || 'test' }}]" --override .github/sibling-pins.txt
           uv pip freeze --python "$RUNNER_TEMP/venv/bin/python"
 
       - name: Prove the core install carries no jax

@@ -55,13 +55,8 @@ anywhere in their dependency tree, while JAX callers get functions that jit,
 vmap, and differentiate natively. Hard dependencies are `numpy`,
 `array-api-compat` and the NumPy-only core of `hwoutils` (constants). Importing
 `zodi` alone does not import JAX; install JAX yourself to pass it JAX arrays.
-JAX users should enable float64:
-
-```python
-import jax
-
-jax.config.update("jax_enable_x64", True)
-```
+The forward models support JAX's default float32 lane. Enable float64 for
+reference calculations and calibration results.
 
 The same functions evaluate a sightline directly:
 
@@ -104,9 +99,11 @@ reflected-light brightness conventions used in exoplanet direct imaging.
 pip install zodi
 ```
 
-The hard dependencies are `numpy` and `array-api-compat`. To also run the test
-suite, install:
+Use `zodi[test]` for NumPy-only tests. To run both JAX precision lanes,
+install the JAX test extra and select the lane explicitly.
 
-```
-pip install "zodi[test]" jax
+```shell
+pip install "zodi[test-jax]"
+pytest --precision=float32
+pytest --precision=float64
 ```

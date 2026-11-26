@@ -34,9 +34,18 @@ def test_jit_matches_eager_exactly():
 
 
 def test_jit_with_static_numpy_tables_matches_numpy():
-    plain = _f(X, Y)
-    jitted = jax.jit(_f)(jnp.asarray(X), jnp.asarray(Y))
-    np.testing.assert_allclose(plain, np.asarray(jitted), rtol=1e-13, atol=0.0)
+    """Allow 12 eps of the largest ordinate at identical query coordinates.
+
+    This covers rounding the table, forming the fractions and complementary
+    weights, multiplying each corner by its weights, and three additions.
+    """
+    from hwoutils.testing import ulps
+
+    x, y = jnp.asarray(X), jnp.asarray(Y)
+    plain = _f(np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64))
+    jitted = jax.jit(_f)(x, y)
+    scale = jnp.asarray(TABLE.max(), dtype=jitted.dtype)
+    np.testing.assert_allclose(jitted, plain, rtol=0, atol=float(ulps(12, scale)))
 
 
 def test_vmap_matches_eager_exactly():
@@ -55,7 +64,13 @@ def test_grad_matches_central_difference():
 
 
 def test_core_color_traces_reference_wavelength_with_scalar_target():
-    """Floating-point basis: 3e-14 for log interpolation, exp and AB color.
+    """Compare traced colors, slopes and magnitudes to float64 power laws.
+
+    Four weighted-sum roundings on each of two log intensities propagate
+    through exp at the log-intensity scale. Allow eight more eps for ratios
+    and powers. The derivative also differences nearby logs to form a slope:
+    its relative condition number is the sum of their magnitudes divided
+    by their difference. AB magnitude propagates color error through log10.
 
     Table 19 gives I(500)=2.6e-6 and I(700)=2.0e-6. Between them,
     I(ref)=I(500)*(ref/500)**s, s=log(2.0/2.6)/log(700/500).
@@ -63,22 +78,34 @@ def test_core_color_traces_reference_wavelength_with_scalar_target():
     (700/ref)**2. Their reference derivatives are -s*color/ref and
     -(s+2)*color/ref. This exercises the scalar-target dispatch boundary.
     """
-    reference = jnp.array([540.0, 610.0])
+    from hwoutils.numerics import eps
+
+    ref64 = np.array([540.0, 610.0])
+    reference = jnp.asarray(ref64)
+    epsilon = eps(reference.dtype)
+    log_i = np.log([2.6e-6, 2.0e-6])
+    color_rtol = (8 * abs(log_i).max() + 8) * epsilon
+    slope_rtol = 4 * abs(log_i).sum() / abs(log_i[1] - log_i[0]) * epsilon
     slope = np.log(2.0 / 2.6) / np.log(700.0 / 500.0)
     for function, exponent in [
         (color_correction, slope),
         (ab_color_correction, slope + 2),
     ]:
         traced = lambda ref, function=function: function(700.0, ref)  # noqa: E731
-        expected = (700.0 / np.asarray(reference)) ** exponent
-        np.testing.assert_allclose(jax.jit(traced)(reference), expected, rtol=3e-14)
+        expected = (700.0 / ref64) ** exponent
+        np.testing.assert_allclose(
+            jax.jit(traced)(reference), expected, rtol=color_rtol, atol=0
+        )
         grad = jax.jit(jax.vmap(jax.grad(traced)))(reference)
-        np.testing.assert_allclose(grad, -exponent * expected / reference, rtol=3e-14)
-    expected_mag = 22.0 - 2.5 * (slope + 2) * np.log10(700.0 / reference)
+        np.testing.assert_allclose(
+            grad, -exponent * expected / ref64, rtol=color_rtol + slope_rtol, atol=0
+        )
+    expected_mag = 22.0 - 2.5 * (slope + 2) * np.log10(700.0 / ref64)
     np.testing.assert_allclose(
         jax.jit(lambda ref: ayo_default_ab_mag(700.0, reference_wavelength_nm=ref))(
             reference
         ),
         expected_mag,
-        rtol=3e-14,
+        atol=2.5 / np.log(10) * color_rtol,
+        rtol=2 * epsilon,
     )

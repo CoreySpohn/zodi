@@ -132,21 +132,42 @@ def test_zodi_flux_ratio_composition():
 
 
 def test_backend_parity():
+    """At these position knots, only table rounding and scaling remain.
+
+    In each spectral interpolation four weighted-sum roundings act on
+    abs(ln(I)) < 16 at these knots. Two radiances enter the color ratio;
+    allow their propagated errors plus the ratio and intensity scaling.
+    Conversion to magnitude scales relative flux error by 2.5/ln(10);
+    the final log and multiplication contribute two relative roundings.
+    """
     jnp = pytest.importorskip("jax.numpy")
+    from hwoutils.numerics import eps
+
     dlon = np.array([60.0, 90.0, 135.0, 200.0])
     beta = np.array([0.0, 15.0, 45.0, 95.0])
     lam = np.array([500.0, 700.0, 1250.0, 2200.0])
-    for fn, args in [
-        (zodi.position_factor, (dlon, beta)),
-        (zodi.specific_intensity_at_location, (dlon, beta)),
-        (zodi.color_correction, (lam,)),
-        (zodi.specific_intensity, (dlon, beta, lam)),
-        (zodi.surface_brightness_ab_mag, (dlon, beta, lam)),
+    color_bound = 2 * 4 * 16 + 1
+    for fn, args, bound in [
+        (zodi.position_factor, (dlon, beta), 2),
+        (zodi.specific_intensity_at_location, (dlon, beta), 4),
+        (zodi.color_correction, (lam,), color_bound),
+        (zodi.specific_intensity, (dlon, beta, lam), color_bound + 5),
     ]:
         a = fn(*args)
         b = fn(*(jnp.asarray(x) for x in args))
-        # a few ULPs of round-off from transcendental ops and fma fusion
-        np.testing.assert_allclose(np.asarray(a), np.asarray(b), rtol=1e-13, atol=0.0)
+        np.testing.assert_allclose(b, a, rtol=bound * eps(b.dtype), atol=0)
+
+    mag = zodi.surface_brightness_ab_mag(dlon, beta, lam)
+    actual = zodi.surface_brightness_ab_mag(
+        *(jnp.asarray(x) for x in (dlon, beta, lam))
+    )
+    epsilon = eps(actual.dtype)
+    np.testing.assert_allclose(
+        actual,
+        mag,
+        rtol=2 * epsilon,
+        atol=2.5 / np.log(10) * (color_bound + 16) * epsilon,
+    )
 
 
 @pytest.mark.parametrize("wavelength_nm", [400.0, 500.0, 910.0, 1200.0])
@@ -182,9 +203,15 @@ def test_ab_color_correction_is_flambda_color_times_lambda_squared():
 
 
 def test_ayo_default_ab_mag_backends(xp):
+    """Allow eight magnitude ULPs for log-color interpolation and AB scaling.
+
+    Each of two interpolated log10 radiances is smaller than 6 in
+    magnitude. Four weighted-sum roundings each, times 2.5, cost at most
+    120 eps in magnitudes. At mag 22 one ULP is 16 eps, leaving rounding
+    room for the wavelength ratio and final subtraction.
+    """
     lam = xp.asarray([500.0, 910.0])
     out = zodi.ayo_default_ab_mag(lam)
     assert out.shape == (2,)
-    np.testing.assert_allclose(
-        np.asarray(out), zodi.ayo_default_ab_mag(np.array([500.0, 910.0])), rtol=1e-13
-    )
+    expected = zodi.ayo_default_ab_mag(np.array([500.0, 910.0]))
+    np.testing.assert_array_max_ulp(np.asarray(out), expected.astype(out.dtype), 8)

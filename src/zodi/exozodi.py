@@ -52,6 +52,8 @@ inclination into [0, 90] deg, with three published models available (see
 :func:`latitudinal_factor`).
 """
 
+import math
+
 import numpy as np
 from hwoutils import constants as const
 
@@ -82,25 +84,38 @@ MAG_1ZODI_V_ARCSEC2 = 22.0
 # Local zodi dust temperature reported by Leinert et al. (1998).
 T_DUST_K = 261.5
 
+# B_lambda per um, evaluated with wavelength in um throughout.
+_PLANCK_UM_K = const.h * const.c / (const.k_B * const.um2m)
+_SQRT_PLANCK_PREFACTOR = math.sqrt(2 * const.h * const.c**2 / const.um2m**4)
+
 # Wavelength arguments in this module are in um. A value above this bound is
 # almost certainly a nm value passed by mistake (the zodi and units modules
 # take nm), since the Leinert Table 19 spectrum ends at 140 um.
 MAX_WAVELENGTH_UM = 200.0
 
 
-def _check_wavelength_um(xp, wavelength_um):
+def _check_wavelength_um(wavelength_um):
     """Reject a um wavelength argument that looks like nm.
 
-    Only concrete numpy inputs are checked; JAX inputs (which may be
-    tracers under ``jit``) pass through unchecked.
+    Check host wavelengths before backend conversion, including when
+    another argument is a JAX array.
     """
-    if xp is not array_namespace():
+    if array_namespace(wavelength_um) is not array_namespace():
         return
-    if np.nanmax(np.asarray(wavelength_um)) > MAX_WAVELENGTH_UM:
+    if np.nanmax(np.asarray(wavelength_um, dtype=np.float64)) > MAX_WAVELENGTH_UM:
         raise ValueError(
             f"wavelength_um exceeds {MAX_WAVELENGTH_UM} um; exozodi functions take "
             "um (the zodi and units modules take nm)"
         )
+
+
+def _scatter_mask(wavelength_um, scatter_cutoff_um):
+    """Compare host values in float64 and dynamic values on a float32 grid."""
+    xp = array_namespace(wavelength_um, scatter_cutoff_um)
+    dtype = np.float64 if xp is array_namespace() else np.float32
+    return xp.asarray(wavelength_um, dtype=dtype) <= xp.asarray(
+        scatter_cutoff_um, dtype=dtype
+    )
 
 
 def exozodi_flux_ratio_v(
@@ -256,12 +271,14 @@ def blackbody_spectral_radiance(wavelength_um, temperature_k):
         Spectral radiance in W m-2 sr-1 um-1.
     """
     xp = array_namespace(wavelength_um, temperature_k)
-    _check_wavelength_um(xp, wavelength_um)
-    lam_m = xp.asarray(wavelength_um) * 1e-6
-    t = xp.asarray(temperature_k)
-    exponent = const.h * const.c / (lam_m * const.k_B * t)
-    radiance_per_m = 2.0 * const.h * const.c**2 / lam_m**5 / xp.expm1(exponent)
-    return radiance_per_m * 1e-6
+    _check_wavelength_um(wavelength_um)
+    lam = xp.asarray(wavelength_um)
+    exponent = _PLANCK_UM_K / lam / xp.asarray(temperature_k)
+    # Scale both half-exponentials before multiplying to retain the Wien tail.
+    # -expm1(-x) retains the Rayleigh-Jeans limit for small x.
+    amplitude = _SQRT_PLANCK_PREFACTOR * xp.exp(-0.5 * exponent)
+    amplitude = amplitude / lam / lam
+    return amplitude * (amplitude / lam) / -xp.expm1(-exponent)
 
 
 def grey_scatter_intensity(
@@ -279,6 +296,8 @@ def grey_scatter_intensity(
     zodi wavelength dependence in the EXOSIMS Fundamental Concepts
     documentation. The scattered term is truncated beyond the cutoff
     (10 um by default), where scattering no longer contributes.
+    Host wavelengths and cutoff are compared in float64. When either is
+    a JAX value, both are compared on the float32 grid in either lane.
 
     Args:
         wavelength_um: Wavelength grid in um.
@@ -297,10 +316,11 @@ def grey_scatter_intensity(
         Model exozodi specific intensity on ``wavelength_um``, in the
         units set by the calibration of the two constants.
     """
-    xp = array_namespace(wavelength_um, star_flux)
-    _check_wavelength_um(xp, wavelength_um)
+    xp = array_namespace(wavelength_um, star_flux, scatter_cutoff_um)
+    _check_wavelength_um(wavelength_um)
+    scatter_mask = _scatter_mask(wavelength_um, scatter_cutoff_um)
     lam = xp.asarray(wavelength_um)
-    scattered = xp.asarray(star_flux) * xp.where(lam <= scatter_cutoff_um, 1.0, 0.0)
+    scattered = xp.asarray(star_flux) * xp.where(scatter_mask, 1.0, 0.0)
     thermal = blackbody_spectral_radiance(lam, t_dust_k)
     return f_star * scattered + f_thermal * thermal
 
@@ -320,6 +340,7 @@ def fit_grey_scatter_constants(
     Leinert Table 19 local zodi spectrum reproduces the EXOSIMS
     calibration procedure; the resulting constants are then valid for any
     star spectrum supplied in the same units and normalization.
+    The cutoff uses the same decision precision as :func:`grey_scatter_intensity`.
 
     Args:
         wavelength_um: Wavelength grid in um.
@@ -333,10 +354,11 @@ def fit_grey_scatter_constants(
     Returns:
         Tuple ``(f_star, f_thermal)``.
     """
-    xp = array_namespace(wavelength_um, star_flux, target_intensity)
-    _check_wavelength_um(xp, wavelength_um)
+    xp = array_namespace(wavelength_um, star_flux, target_intensity, scatter_cutoff_um)
+    _check_wavelength_um(wavelength_um)
+    scatter_mask = _scatter_mask(wavelength_um, scatter_cutoff_um)
     lam = xp.asarray(wavelength_um)
-    s = xp.asarray(star_flux) * xp.where(lam <= scatter_cutoff_um, 1.0, 0.0)
+    s = xp.asarray(star_flux) * xp.where(scatter_mask, 1.0, 0.0)
     b = blackbody_spectral_radiance(lam, t_dust_k)
     y = xp.asarray(target_intensity)
 
