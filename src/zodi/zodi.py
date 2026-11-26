@@ -28,7 +28,7 @@ from hwoutils import constants as const
 
 from zodi import tables, units
 from zodi._interp import interp1d_clamped, interp2d_bilinear_clamped
-from zodi._xp import array_namespace
+from zodi._xp import _working_inputs
 
 __all__ = [
     "AYO_DEFAULT_ZODI_MAG_V",
@@ -72,7 +72,7 @@ def position_factor(dlon_deg, beta_deg):
     Returns:
         Dimensionless brightness factor, 1 at (90 deg, 0 deg).
     """
-    xp = array_namespace(dlon_deg, beta_deg)
+    xp, (dlon_deg, beta_deg) = _working_inputs(dlon_deg, beta_deg)
     lon = xp.abs(xp.asarray(dlon_deg))
     lat = xp.abs(xp.asarray(beta_deg))
     value = interp2d_bilinear_clamped(
@@ -93,7 +93,7 @@ def specific_intensity_at_location(dlon_deg, beta_deg, photon_units=False):
     Returns:
         Specific intensity of the zodiacal light at 500 nm.
     """
-    xp = array_namespace(dlon_deg, beta_deg)
+    xp, (dlon_deg, beta_deg) = _working_inputs(dlon_deg, beta_deg)
     lon = xp.abs(xp.asarray(dlon_deg))
     lat = xp.abs(xp.asarray(beta_deg))
     value = interp2d_bilinear_clamped(
@@ -123,7 +123,9 @@ def color_correction(wavelength_nm, reference_wavelength_nm=500.0, photon_units=
     Returns:
         Dimensionless color correction factor.
     """
-    xp = array_namespace(wavelength_nm, reference_wavelength_nm)
+    xp, (wavelength_nm, reference_wavelength_nm) = _working_inputs(
+        wavelength_nm, reference_wavelength_nm
+    )
     factor = _table19_radiance(xp, wavelength_nm) / _table19_radiance(
         xp, reference_wavelength_nm
     )
@@ -151,7 +153,9 @@ def ab_color_correction(wavelength_nm, reference_wavelength_nm=500.0):
     Returns:
         Dimensionless F_nu ratio, target over reference.
     """
-    xp = array_namespace(wavelength_nm, reference_wavelength_nm)
+    xp, (wavelength_nm, reference_wavelength_nm) = _working_inputs(
+        wavelength_nm, reference_wavelength_nm
+    )
     ratio = xp.asarray(wavelength_nm) / xp.asarray(reference_wavelength_nm)
     return color_correction(wavelength_nm, reference_wavelength_nm) * ratio**2
 
@@ -177,7 +181,9 @@ def ayo_default_ab_mag(
     Returns:
         AB surface brightness in magnitudes per square arcsecond.
     """
-    xp = array_namespace(wavelength_nm, mag_v, reference_wavelength_nm)
+    xp, (wavelength_nm, mag_v, reference_wavelength_nm) = _working_inputs(
+        wavelength_nm, mag_v, reference_wavelength_nm
+    )
     color = ab_color_correction(wavelength_nm, reference_wavelength_nm)
     return mag_v - 2.5 * xp.log10(color)
 
@@ -204,7 +210,9 @@ def specific_intensity(
     """
     if anchor not in ("table17", "table19"):
         raise ValueError("anchor must be 'table17' or 'table19'")
-    xp = array_namespace(dlon_deg, beta_deg, wavelength_nm)
+    xp, (dlon_deg, beta_deg, wavelength_nm) = _working_inputs(
+        dlon_deg, beta_deg, wavelength_nm
+    )
     if anchor == "table17":
         intensity = specific_intensity_at_location(
             dlon_deg, beta_deg
@@ -255,7 +263,9 @@ def zodi_flux_ratio(dlon_deg, beta_deg, wavelength_nm, f0_ph_s_m2_nm, anchor="ta
         Surface brightness as a dimensionless flux ratio per square
         arcsecond.
     """
-    xp = array_namespace(dlon_deg, beta_deg, wavelength_nm, f0_ph_s_m2_nm)
+    xp, (dlon_deg, beta_deg, wavelength_nm, f0_ph_s_m2_nm) = _working_inputs(
+        dlon_deg, beta_deg, wavelength_nm, f0_ph_s_m2_nm
+    )
     intensity_photon = specific_intensity(
         dlon_deg, beta_deg, wavelength_nm, photon_units=True, anchor=anchor
     )

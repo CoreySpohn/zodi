@@ -22,8 +22,8 @@ def array_namespace(*args):
     numpy arrays are treated as backend-neutral static data: when the
     arguments mix numpy arrays with arrays from one other backend (for
     example a numpy wavelength grid alongside jax spectra), the other
-    backend wins and the numpy inputs are lifted into it with ``asarray``
-    by the caller. Arrays from two non-numpy backends still raise.
+    backend wins and callers can stage the numpy inputs at its working
+    precision. Arrays from two non-numpy backends still raise.
 
     Args:
         *args: Candidate inputs; anything with a ``shape`` attribute is
@@ -43,3 +43,23 @@ def array_namespace(*args):
         if not foreign:
             raise
         return array_api_compat.array_namespace(*foreign)
+
+
+def _working_namespace(*values):
+    """Choose the backend and working dtype without converting host operands."""
+    xp = array_namespace(*values)
+    if xp is _NUMPY_XP:
+        return xp, None
+    device = (value for value in values if array_api_compat.is_jax_array(value))
+    return xp, xp.result_type(*device, 0.0)
+
+
+def _working_inputs(*values):
+    """Stage host operands at the device operands' working precision."""
+    xp, dtype = _working_namespace(*values)
+    if dtype is None:
+        return xp, values
+    return xp, tuple(
+        xp.asarray(value, dtype=dtype) if value is not None else None
+        for value in values
+    )

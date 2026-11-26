@@ -21,7 +21,7 @@ from math import isfinite
 from numbers import Real
 from typing import Any, ClassVar
 
-from zodi._xp import array_namespace
+from zodi._xp import _working_inputs, _working_namespace
 from zodi.exozodi import MAG_1ZODI_V_ARCSEC2, MV_SUN, exozodi_flux_ratio_v
 from zodi.units import flux_ratio_to_mag
 from zodi.zodi import V_BAND_WAVELENGTH_NM, specific_intensity
@@ -210,30 +210,51 @@ class SurfaceBrightnessDust(AbstractDustAmplitude):
         is bolometric in L_sun, and radius is in AU. The result is
         dimensionless per arcsec^2 relative to the passband zero-magnitude
         flux density, not relative to the host star.
+
+        Args:
+            host_band_abs_mag: Host absolute magnitude for the band rule.
+            host_luminosity_lsun: Host bolometric luminosity for the bolometric rule.
+            r_au: Dust radius in AU.
+
+        Returns:
+            Passband flux ratio per square arcsecond.
         """
-        xp = array_namespace(self.level, host_band_abs_mag, host_luminosity_lsun, r_au)
+        xp, dtype = _working_namespace(
+            self.level, host_band_abs_mag, host_luminosity_lsun, r_au
+        )
+        level = xp.asarray(self.level, dtype=dtype)
         if self.luminosity_rule == "band":
             return exozodi_flux_ratio_v(
-                xp.asarray(self.level),
-                xp.asarray(host_band_abs_mag),
-                xp.asarray(r_au),
+                level,
+                host_band_abs_mag,
+                r_au,
                 mag_1zodi=self.mag_per_arcsec2,
                 mv_sun=self.reference_star.band_abs_mag,
             )
         return (
-            xp.asarray(self.level)
+            level
             * 10.0 ** (-0.4 * self.mag_per_arcsec2)
-            * xp.asarray(host_luminosity_lsun)
-            / xp.asarray(r_au) ** 2
+            * xp.asarray(host_luminosity_lsun, dtype=dtype)
+            / xp.asarray(r_au, dtype=dtype) ** 2
         )
 
     def at_eeid(self, *, host_band_abs_mag, host_luminosity_lsun):
-        """Return the flux ratio at sqrt(host_luminosity_lsun) AU."""
-        xp = array_namespace(self.level, host_band_abs_mag, host_luminosity_lsun)
+        """Return the flux ratio at sqrt(host_luminosity_lsun) AU.
+
+        Args:
+            host_band_abs_mag: Host absolute magnitude for the band rule.
+            host_luminosity_lsun: Host bolometric luminosity in solar units.
+
+        Returns:
+            Passband flux ratio per square arcsecond at the EEID.
+        """
+        xp, dtype = _working_namespace(
+            self.level, host_band_abs_mag, host_luminosity_lsun
+        )
         return self.flux_ratio(
             host_band_abs_mag=host_band_abs_mag,
             host_luminosity_lsun=host_luminosity_lsun,
-            r_au=xp.sqrt(xp.asarray(host_luminosity_lsun)),
+            r_au=xp.sqrt(xp.asarray(host_luminosity_lsun, dtype=dtype)),
         )
 
     def mag_per_arcsec2_at(self, *, host_band_abs_mag, host_luminosity_lsun, r_au):
@@ -273,14 +294,17 @@ class LocalZodiMultiple(AbstractDustAmplitude):
     def specific_intensity(self, wavelength_nm):
         """Return level times local intensity in W m-2 sr-1 um-1.
 
-        Wavelength is in nm. The existing local-zodi function supplies the
-        spectrum with its default Table 17 anchoring and power units.
+        The local-zodi spectrum uses the default Table 17 anchoring.
+
+        Args:
+            wavelength_nm: Wavelength in nm.
+
+        Returns:
+            Scaled spectral radiance in W m-2 sr-1 um-1.
         """
-        xp = array_namespace(self.level, wavelength_nm)
-        return xp.asarray(self.level) * specific_intensity(
-            xp.asarray(self.helioecliptic_longitude_deg),
-            xp.asarray(self.ecliptic_latitude_deg),
-            xp.asarray(wavelength_nm),
+        xp, (level, wavelength_nm) = _working_inputs(self.level, wavelength_nm)
+        return xp.asarray(level) * specific_intensity(
+            self.helioecliptic_longitude_deg, self.ecliptic_latitude_deg, wavelength_nm
         )
 
 
