@@ -59,7 +59,7 @@ from hwoutils import constants as const
 
 from zodi import tables
 from zodi._interp import interp1d_clamped
-from zodi._xp import array_namespace
+from zodi._xp import _working_inputs, _working_namespace, array_namespace
 
 __all__ = [
     "MAG_1ZODI_V_ARCSEC2",
@@ -118,6 +118,25 @@ def _scatter_mask(wavelength_um, scatter_cutoff_um):
     )
 
 
+def _magnitude_difference(xp, dtype, magnitude, reference):
+    """Difference host magnitudes before staging the color on device."""
+    if dtype is None:
+        return xp.asarray(magnitude) - reference
+    if array_namespace(magnitude, reference) is array_namespace():
+        difference = np.asarray(magnitude) - np.asarray(reference)
+        return xp.asarray(difference, dtype=dtype)
+    return xp.asarray(magnitude, dtype=dtype) - xp.asarray(reference, dtype=dtype)
+
+
+def _calibration_flux_scale(xp, dtype, magnitude):
+    """Compute a host calibration before rounding its flux scale."""
+    if dtype is None:
+        return 10.0 ** (-0.4 * magnitude)
+    if array_namespace(magnitude) is not array_namespace():
+        magnitude = xp.asarray(magnitude, dtype=dtype)
+    return xp.asarray(10.0 ** (-0.4 * magnitude), dtype=dtype)
+
+
 def exozodi_flux_ratio_v(
     nzodi, mv_star, r_au, *, mag_1zodi=MAG_1ZODI_V_ARCSEC2, mv_sun=MV_SUN
 ):
@@ -141,12 +160,13 @@ def exozodi_flux_ratio_v(
     Returns:
         Flux ratio per square arcsecond.
     """
-    xp = array_namespace(nzodi, mv_star, r_au)
+    xp, dtype = _working_namespace(nzodi, mv_star, r_au, mag_1zodi, mv_sun)
+    delta_v = _magnitude_difference(xp, dtype, mv_star, mv_sun)
     return (
-        xp.asarray(nzodi)
-        * 10.0 ** (-0.4 * (xp.asarray(mv_star) - mv_sun))
-        * 10.0 ** (-0.4 * mag_1zodi)
-        / xp.asarray(r_au) ** 2
+        xp.asarray(nzodi, dtype=dtype)
+        * 10.0 ** (-0.4 * delta_v)
+        * _calibration_flux_scale(xp, dtype, mag_1zodi)
+        / xp.asarray(r_au, dtype=dtype) ** 2
     )
 
 
@@ -183,12 +203,18 @@ def exozodi_flux_ratio_band(
         Flux ratio per square arcsecond, relative to the observing band's
         zero-magnitude flux density.
     """
-    xp = array_namespace(nzodi, mv_star, vmag_star, band_mag_star)
+    xp, dtype = _working_namespace(
+        nzodi, mv_star, vmag_star, band_mag_star, mag_1zodi, mv_sun
+    )
+    delta_v = _magnitude_difference(xp, dtype, mv_star, mv_sun)
+    if dtype is None:
+        vmag_star = xp.asarray(vmag_star)
+    color = _magnitude_difference(xp, dtype, band_mag_star, vmag_star)
     return (
-        xp.asarray(nzodi)
-        * 10.0 ** (-0.4 * mag_1zodi)
-        * 10.0 ** (-0.4 * (xp.asarray(mv_star) - mv_sun))
-        * 10.0 ** (-0.4 * (xp.asarray(band_mag_star) - xp.asarray(vmag_star)))
+        xp.asarray(nzodi, dtype=dtype)
+        * _calibration_flux_scale(xp, dtype, mag_1zodi)
+        * 10.0 ** (-0.4 * delta_v)
+        * 10.0 ** (-0.4 * color)
     )
 
 
@@ -270,8 +296,8 @@ def blackbody_spectral_radiance(wavelength_um, temperature_k):
     Returns:
         Spectral radiance in W m-2 sr-1 um-1.
     """
-    xp = array_namespace(wavelength_um, temperature_k)
     _check_wavelength_um(wavelength_um)
+    xp, (wavelength_um, temperature_k) = _working_inputs(wavelength_um, temperature_k)
     lam = xp.asarray(wavelength_um)
     exponent = _PLANCK_UM_K / lam / xp.asarray(temperature_k)
     # Scale both half-exponentials before multiplying to retain the Wien tail.
@@ -316,12 +342,15 @@ def grey_scatter_intensity(
         Model exozodi specific intensity on ``wavelength_um``, in the
         units set by the calibration of the two constants.
     """
-    xp = array_namespace(wavelength_um, star_flux, scatter_cutoff_um)
     _check_wavelength_um(wavelength_um)
     scatter_mask = _scatter_mask(wavelength_um, scatter_cutoff_um)
-    lam = xp.asarray(wavelength_um)
-    scattered = xp.asarray(star_flux) * xp.where(scatter_mask, 1.0, 0.0)
-    thermal = blackbody_spectral_radiance(lam, t_dust_k)
+    xp, (wavelength_um, star_flux, f_star, f_thermal, t_dust_k, _) = _working_inputs(
+        wavelength_um, star_flux, f_star, f_thermal, t_dust_k, scatter_cutoff_um
+    )
+    if xp is array_namespace():
+        scatter_mask = xp.where(scatter_mask, 1.0, 0.0)
+    scattered = xp.asarray(star_flux) * scatter_mask
+    thermal = blackbody_spectral_radiance(wavelength_um, t_dust_k)
     return f_star * scattered + f_thermal * thermal
 
 
@@ -406,14 +435,23 @@ def jez0(
     Returns:
         Reference exozodi intensity in ph s-1 m-2 arcsec-2.
     """
-    xp = array_namespace(f0v_ph_s_m2, mv_star, l_star_lsun, flambda, bandwidth_nm)
+    xp, dtype = _working_namespace(
+        f0v_ph_s_m2,
+        mv_star,
+        l_star_lsun,
+        flambda,
+        bandwidth_nm,
+        mag_1zodi,
+        mv_sun,
+    )
+    delta_v = _magnitude_difference(xp, dtype, mv_star, mv_sun)
     return (
-        xp.asarray(f0v_ph_s_m2)
-        * 10.0 ** (-0.4 * (xp.asarray(mv_star) - mv_sun))
-        * 10.0 ** (-0.4 * mag_1zodi)
-        * xp.asarray(flambda)
-        * xp.asarray(bandwidth_nm)
-        / xp.asarray(l_star_lsun)
+        xp.asarray(f0v_ph_s_m2, dtype=dtype)
+        * 10.0 ** (-0.4 * delta_v)
+        * _calibration_flux_scale(xp, dtype, mag_1zodi)
+        * xp.asarray(flambda, dtype=dtype)
+        * xp.asarray(bandwidth_nm, dtype=dtype)
+        / xp.asarray(l_star_lsun, dtype=dtype)
     )
 
 
@@ -442,7 +480,9 @@ def scale_jez(jez0_value, nzodi, r_au, fbeta, l_star_lsun):
     Returns:
         Exozodi intensity at the epoch, same units as ``jez0_value``.
     """
-    xp = array_namespace(jez0_value, nzodi, r_au, fbeta, l_star_lsun)
+    xp, (jez0_value, nzodi, r_au, fbeta, l_star_lsun) = _working_inputs(
+        jez0_value, nzodi, r_au, fbeta, l_star_lsun
+    )
     return (
         xp.asarray(jez0_value)
         * xp.asarray(nzodi)

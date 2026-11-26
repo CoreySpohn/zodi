@@ -15,7 +15,7 @@ All functions run on numpy or jax inputs (see ``zodi._xp``).
 
 from hwoutils import constants as const
 
-from zodi._xp import array_namespace
+from zodi._xp import _working_inputs, array_namespace
 
 __all__ = [
     "ab_mag_arcsec2_from_intensity",
@@ -72,7 +72,9 @@ def power_to_photon_intensity(intensity_w_m2_sr_um, wavelength_nm):
     Returns:
         Photon-rate specific intensity in ph s-1 m-2 sr-1 um-1.
     """
-    xp = array_namespace(intensity_w_m2_sr_um, wavelength_nm)
+    xp, (intensity_w_m2_sr_um, wavelength_nm) = _working_inputs(
+        intensity_w_m2_sr_um, wavelength_nm
+    )
     wavelength_m = xp.asarray(wavelength_nm) * 1e-9
     photon_energy_j = const.h * const.c / wavelength_m
     return xp.asarray(intensity_w_m2_sr_um) / photon_energy_j
@@ -93,7 +95,9 @@ def photon_ratio_factor(wavelength_nm, reference_wavelength_nm):
     Returns:
         The multiplicative factor ``lambda / lambda_ref``.
     """
-    xp = array_namespace(wavelength_nm, reference_wavelength_nm)
+    xp, (wavelength_nm, reference_wavelength_nm) = _working_inputs(
+        wavelength_nm, reference_wavelength_nm
+    )
     return xp.asarray(wavelength_nm) / xp.asarray(reference_wavelength_nm)
 
 
@@ -111,7 +115,9 @@ def intensity_to_mjy_per_sr(intensity_w_m2_sr_um, wavelength_um):
     Returns:
         Specific intensity in MJy sr-1.
     """
-    xp = array_namespace(intensity_w_m2_sr_um, wavelength_um)
+    xp, (intensity_w_m2_sr_um, wavelength_um) = _working_inputs(
+        intensity_w_m2_sr_um, wavelength_um
+    )
     lam = xp.asarray(wavelength_um)
     return xp.asarray(intensity_w_m2_sr_um) * lam**2 * 1e14 / const.c
 
@@ -131,7 +137,9 @@ def ab_mag_arcsec2_from_intensity(intensity_w_m2_sr_um, wavelength_nm):
     Returns:
         AB surface brightness in magnitudes per square arcsecond.
     """
-    xp = array_namespace(intensity_w_m2_sr_um, wavelength_nm)
+    xp, (intensity_w_m2_sr_um, wavelength_nm) = _working_inputs(
+        intensity_w_m2_sr_um, wavelength_nm
+    )
     lam_um = xp.asarray(wavelength_nm) / 1000.0
     per_arcsec2 = xp.asarray(intensity_w_m2_sr_um) / const.rad2arcsec**2
     flux_jy = per_arcsec2 * lam_um**2 * 1e14 / const.c * 1e6
@@ -149,7 +157,7 @@ def intensity_from_ab_mag_arcsec2(mag_arcsec2, wavelength_nm):
     Returns:
         Specific intensity in W m-2 sr-1 um-1.
     """
-    xp = array_namespace(mag_arcsec2, wavelength_nm)
+    xp, (mag_arcsec2, wavelength_nm) = _working_inputs(mag_arcsec2, wavelength_nm)
     lam_um = xp.asarray(wavelength_nm) / 1000.0
     flux_jy = const.AB_ZERO_POINT_JY * 10.0 ** (-0.4 * xp.asarray(mag_arcsec2))
     per_arcsec2 = flux_jy / 1e6 / (lam_um**2 * 1e14 / const.c)
