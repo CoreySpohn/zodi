@@ -15,9 +15,14 @@ Y_QUERIES = np.array([-2.0, -1.0, -0.3, 0.25, 0.9, 1.0, 3.0])
 
 
 def test_interp1d_matches_numpy_reference(xp):
-    got = interp1d_clamped(XG, VG, xp.asarray(X_QUERIES))
-    expected = np.interp(X_QUERIES, XG, VG)  # np.interp clamps at the edges
-    np.testing.assert_allclose(np.asarray(got), expected, rtol=0, atol=1e-14)
+    """At the supplied query, allow a rounded knot and four weighted-sum ops.
+
+    The grid has exact unit steps. The positive ordinates prevent cancellation.
+    """
+    query = xp.asarray(X_QUERIES)
+    got = np.asarray(interp1d_clamped(XG, VG, query))
+    expected = np.interp(np.asarray(query, dtype=np.float64), XG, VG)
+    np.testing.assert_array_max_ulp(got, expected.astype(got.dtype), maxulp=5)
 
 
 def test_interp1d_scalar_query_stays_plain_numpy():
@@ -26,11 +31,12 @@ def test_interp1d_scalar_query_stays_plain_numpy():
 
 
 def test_interp2d_exact_at_nodes(xp):
+    """Zero and unit weights reproduce the stored knot exactly at its dtype."""
     xi, yj = np.meshgrid(XG, YG, indexing="ij")
     got = interp2d_bilinear_clamped(
         XG, YG, TABLE, xp.asarray(xi.ravel()), xp.asarray(yj.ravel())
     )
-    np.testing.assert_allclose(np.asarray(got), TABLE.ravel(), rtol=0, atol=1e-14)
+    np.testing.assert_array_equal(np.asarray(got), TABLE.ravel().astype(got.dtype))
 
 
 def test_interp2d_midpoint_is_cell_average(xp):
@@ -54,11 +60,18 @@ def test_interp2d_clamps_to_edges(xp):
 
 
 def test_backends_agree_to_roundoff():
+    """Use the table scale for cancellation between signed corner values.
+
+    Twelve roundings cover cell fractions, two complements, corner products,
+    three additions, and narrowing the ordinates at identical query positions.
+    """
     jnp = pytest.importorskip("jax.numpy")
-    b_np = interp2d_bilinear_clamped(XG, YG, TABLE, X_QUERIES, Y_QUERIES)
-    b_jax = interp2d_bilinear_clamped(
-        XG, YG, TABLE, jnp.asarray(X_QUERIES), jnp.asarray(Y_QUERIES)
+    from hwoutils.testing import ulps
+
+    x, y = jnp.asarray(X_QUERIES), jnp.asarray(Y_QUERIES)
+    b_np = interp2d_bilinear_clamped(
+        XG, YG, TABLE, np.asarray(x, dtype=np.float64), np.asarray(y, dtype=np.float64)
     )
-    # XLA may contract the bilinear multiply-adds into fmas, so agreement
-    # is to round-off rather than bit-exact on every platform
-    np.testing.assert_allclose(b_np, np.asarray(b_jax), rtol=1e-13, atol=0.0)
+    b_jax = interp2d_bilinear_clamped(XG, YG, TABLE, x, y)
+    scale = jnp.asarray(np.max(np.abs(TABLE)), dtype=b_jax.dtype)
+    np.testing.assert_allclose(b_jax, b_np, rtol=0, atol=float(ulps(12, scale)))

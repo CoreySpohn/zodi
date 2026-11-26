@@ -1,5 +1,7 @@
 """Exozodi chain: magnitude scalings, latitudinal models, grey-scatter fit."""
 
+from functools import partial
+
 import ineedvalidation as vv
 import numpy as np
 import pytest
@@ -135,11 +137,45 @@ class TestGreyScatterFit:
         np.testing.assert_allclose(got_star, f_star, rtol=1e-10)
         np.testing.assert_allclose(got_thermal, f_thermal, rtol=1e-10)
 
-    def test_scatter_cutoff_excludes_long_wavelengths(self):
-        lam = np.array([1.0, 5.0, 20.0])
-        star = np.ones(3)
-        got = exozodi.grey_scatter_intensity(lam, star, 1.0, 0.0)
-        np.testing.assert_allclose(got, [1.0, 1.0, 0.0])
+    @vv.case("exozodi-conventions", "code-verification")
+    def test_scatter_cutoff_excludes_long_wavelengths(self, xp):
+        """Fails if backend conversion changes membership on either decision grid.
+
+        With unit stellar flux, the masked stellar column is also the target.
+        The normal equations reuse identical reductions, leaving only the
+        final products, subtraction, and division. The determinant retains
+        over one third of its leading product on either grid, so eight
+        spacings at one bound these errors.
+        """
+        first_above_float32 = np.nextafter(np.float32(10.0), np.float32(11.0))
+        lam = np.array(
+            [10.0, np.nextafter(10.0, 11.0), 10.0 + 1e-9, first_above_float32, 11.0]
+        )
+        star = xp.ones(lam.size)
+        host_target = xp.asarray([1.0, 0.0, 0.0, 0.0, 0.0])
+
+        def evaluate(wavelength, flux, target):
+            intensity = exozodi.grey_scatter_intensity(wavelength, flux, 1.0, 0.0)
+            constants = exozodi.fit_grey_scatter_constants(wavelength, flux, target)
+            return intensity, constants
+
+        def check(result, target):
+            intensity, constants = result
+            np.testing.assert_array_equal(intensity, target)
+            np.testing.assert_allclose(
+                constants, [1.0, 0.0], rtol=0, atol=8 * np.spacing(star.dtype.type(1))
+            )
+
+        check(evaluate(lam, star, host_target), host_target)
+        if xp is not np:
+            jax = pytest.importorskip("jax")
+            check(jax.jit(partial(evaluate, lam))(star, host_target), host_target)
+
+            # Both wavelengths just above 10 um round to 10 on the decision grid.
+            device_target = xp.asarray([1.0, 1.0, 1.0, 0.0, 0.0])
+            device_lam = xp.asarray(lam)
+            check(evaluate(device_lam, star, device_target), device_target)
+            check(jax.jit(evaluate)(device_lam, star, device_target), device_target)
 
     @pytest.mark.float64_only(reason="grey-scatter calibration to Leinert Table 19")
     def test_table19_calibration_with_blackbody_sun_proxy(self):
@@ -170,10 +206,22 @@ class TestGreyScatterFit:
 
 
 class TestWavelengthUnitGuard:
-    def test_nm_value_into_um_argument_raises(self):
-        lam_nm = np.linspace(400.0, 900.0, 11)
-        with pytest.raises(ValueError, match="um"):
-            exozodi.blackbody_spectral_radiance(lam_nm, 261.5)
+    def test_host_wavelength_above_um_limit_raises(self, xp):
+        """Fails if a JAX argument bypasses the host wavelength limit."""
+        lam = np.array([np.nextafter(200.0, np.inf)])
+        flux = xp.ones(lam.size)
+        cases = (
+            (exozodi.blackbody_spectral_radiance, (xp.asarray(261.5),)),
+            (exozodi.grey_scatter_intensity, (flux, 1.0, 0.0)),
+            (exozodi.fit_grey_scatter_constants, (flux, flux)),
+        )
+        jax = pytest.importorskip("jax") if xp is not np else None
+        for evaluate, args in cases:
+            with pytest.raises(ValueError, match="wavelength_um exceeds"):
+                evaluate(lam, *args)
+            if jax is not None:
+                with pytest.raises(ValueError, match="wavelength_um exceeds"):
+                    jax.jit(partial(evaluate, lam))(*args)
 
 
 class TestJez:
@@ -220,7 +268,19 @@ class TestJez:
 
 
 def test_backend_parity():
+    """Check the geometry, magnitude chain, and grey spectrum against float64.
+
+    The V chain allows 12 eps for casting, magnitude subtraction and power,
+    products, and division. Folding these integer angles is exact. The
+    normalized latitude table uses eight roundings; the signed cubic uses
+    16 relative eps for the angle, sine, powers, products, and additions.
+    Thermal error counts 12 amplitude and conversion roundings and six in
+    the exponent, amplified by x/(1-exp(-x)). The positive grey spectrum
+    adds twice the thermal error plus three product and sum roundings.
+    """
     jnp = pytest.importorskip("jax.numpy")
+    from hwoutils.numerics import eps
+
     lam = np.geomspace(0.3, 50.0, 12)
     star = 1e3 * lam**-2
     inc = np.array([0.0, 45.0, 135.0])
@@ -232,20 +292,28 @@ def test_backend_parity():
                 np.array([4.0, 5.0]),
                 np.array([1.0, 1.5]),
             ),
+            12,
         ),
-        (exozodi.theta_from_inclination, (inc,)),
-        (lambda t: exozodi.latitudinal_factor(t, model="leinert"), (inc,)),
-        (lambda t: exozodi.latitudinal_factor(t, model="stark2014"), (inc,)),
-        (exozodi.blackbody_spectral_radiance, (lam, 261.5)),
-        (lambda w, s: exozodi.grey_scatter_intensity(w, s, 1e-3, 2.0), (lam, star)),
+        (exozodi.theta_from_inclination, (inc,), 0),
+        (lambda t: exozodi.latitudinal_factor(t, model="leinert"), (inc,), 8),
+        (lambda t: exozodi.latitudinal_factor(t, model="stark2014"), (inc,), 16),
     ]
-    for fn, args in cases:
-        a = fn(*args)
-        b = fn(*(jnp.asarray(x) for x in args))
-        # transcendental ops (10**x, expm1, sin) and XLA fma fusion allow
-        # a few ULPs of cross-backend round-off; gather/arithmetic paths
-        # are exact
-        np.testing.assert_allclose(np.asarray(a), np.asarray(b), rtol=1e-13, atol=0.0)
+    for fn, args, n_ops in cases:
+        expected = fn(*args)
+        actual = fn(*(jnp.asarray(x) for x in args))
+        np.testing.assert_allclose(
+            actual, expected, rtol=n_ops * eps(actual.dtype), atol=0
+        )
+
+    thermal = exozodi.blackbody_spectral_radiance(lam, 261.5)
+    spectrum = exozodi.grey_scatter_intensity(lam, star, 1e-3, 2.0)
+    jlam = jnp.asarray(lam)
+    thermal_bound = _planck_error(lam, 261.5, thermal, jlam.dtype)
+    actual = exozodi.blackbody_spectral_radiance(jlam, 261.5)
+    np.testing.assert_array_less(abs(np.asarray(actual) - thermal), thermal_bound)
+    actual = exozodi.grey_scatter_intensity(jlam, jnp.asarray(star), 1e-3, 2.0)
+    bound = 2 * thermal_bound + 3 * eps(actual.dtype) * spectrum
+    np.testing.assert_array_less(abs(np.asarray(actual) - spectrum), bound)
 
 
 def test_grad_through_grey_scatter_fit():
@@ -265,23 +333,77 @@ def test_grad_through_grey_scatter_fit():
     assert np.isfinite(float(g))
 
 
-def test_blackbody_agrees_with_hwoutils(xp):
-    """Fails if Planck units or temperature scaling differ from photon radiance.
+def _planck_error(lam_um, temperature, radiance, dtype):
+    """Absolute energy-radiance error at the local Planck condition number."""
+    from hwoutils.constants import c, h, k_B, um2m
+    from hwoutils.numerics import eps
 
-    Tolerance basis: floating-point, 2e-12 relative with zero absolute
-    tolerance permits exponent roundoff in the Wien tail (x up to 480).
-    Expected energy radiance is independently converted from hwoutils'
-    photon law, using nm per um to convert the spectral density.
+    x = (h * c / (k_B * um2m)) / (lam_um * temperature)
+    sensitivity = x / -np.expm1(-x)
+    roundoff = (12 + 6 * sensitivity) * eps(dtype) * radiance
+    tiny = np.finfo(dtype).tiny
+    return np.where(radiance < tiny, tiny, roundoff)
+
+
+def test_blackbody_agrees_with_hwoutils(xp, precision):
+    """Compare energy radiance to the photon law and the float64 Planck law.
+
+    The logarithmic sensitivity to exponent error is x/(1-exp(-x)). Six
+    roundings cover constants, input casts, nm to um, product and quotient.
+    Twelve more cover lambda**-5, the occupation factor, and unit conversion.
+    Below the smallest normal radiance the backend may flush to zero.
+    All float64-reference values in the normal range must remain positive.
     """
-    pytest.importorskip("hwoutils")
     pytest.importorskip("jax")
-    from hwoutils.constants import nm2um, um2nm
+    from hwoutils.constants import c, h, k_B, nm2m, nm2um, um2m, um2nm
     from hwoutils.conversions import photons_per_nm_per_m2_to_w_per_nm_per_m2
     from hwoutils.planck import planck_photon_radiance
 
-    wavelength_nm = xp.asarray(np.geomspace(300.0, 30000.0, 31))[:, None]
-    temperature_k = xp.asarray(np.geomspace(100.0, 6000.0, 13))[None, :]
-    photons = planck_photon_radiance(wavelength_nm, temperature_k)
-    expected = photons_per_nm_per_m2_to_w_per_nm_per_m2(photons, wavelength_nm) * um2nm
-    actual = exozodi.blackbody_spectral_radiance(wavelength_nm * nm2um, temperature_k)
-    np.testing.assert_allclose(actual, expected, rtol=2e-12, atol=0)
+    nm = np.geomspace(300.0, 30000.0, 31)[:, None]
+    temp = np.geomspace(100.0, 6000.0, 13)[None, :]
+    meters = nm * nm2m
+    reference = (2 * h * c**2 * um2m / meters**5) / np.expm1(
+        (h * c / k_B) / (meters * temp)
+    )
+    wavelength_nm = xp.asarray(nm, dtype=precision)
+    temperature = xp.asarray(temp, dtype=precision)
+    actual = np.asarray(
+        exozodi.blackbody_spectral_radiance(wavelength_nm * nm2um, temperature)
+    )
+    assert actual.dtype == precision
+    normal = reference >= np.finfo(precision).tiny
+    assert np.all(actual[normal] > 0)
+    bound = _planck_error(nm * nm2um, temp, reference, precision)
+    np.testing.assert_array_less(abs(actual - reference), bound)
+
+    photons = planck_photon_radiance(wavelength_nm, temperature)
+    # Convert on the host so a per-nm intermediate cannot flush a normal
+    # per-um result. Each independent law gets its own roundoff allowance.
+    energy = (
+        photons_per_nm_per_m2_to_w_per_nm_per_m2(
+            np.asarray(photons, dtype=np.float64), nm
+        )
+        * um2nm
+    )
+    np.testing.assert_array_less(abs(actual - energy), 2 * bound)
+
+
+@pytest.mark.float64_only(reason="mixed-precision comparison to a float64 forward")
+def test_blackbody_float32_inside_float64():
+    """No wide intermediates; the relative Wien error scales with x.
+
+    At 0.4 um and 400 K the exponent exceeds the float32 exp overflow
+    threshold while the radiance is normal. Use the same conditioned
+    bound as the full grid, relative to each individual radiance.
+    """
+    jnp = pytest.importorskip("jax.numpy")
+    from hwoutils.testing import assert_precision_closed, precision_pair
+
+    law = exozodi.blackbody_spectral_radiance
+    wave = jnp.asarray([0.4, 10.0, 100.0])
+    temperature = jnp.asarray(400.0)
+    assert_precision_closed(
+        law, wave.astype(jnp.float32), temperature.astype(jnp.float32)
+    )
+    bound = _planck_error(0.4, 400, 1.0, np.dtype("float32"))
+    precision_pair(law, (wave, temperature), bound=bound, scale=0)

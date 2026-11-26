@@ -78,7 +78,7 @@ jobs:
           echo "VIRTUAL_ENV=$PWD/.venv" >> "$GITHUB_ENV"
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
           # One resolve, so pinned siblings satisfy the package floors.
-          uv pip install --python .venv/bin/python -e ".[test]" ${{ matrix.backend == 'jax' && 'jax>=0.4.33 jaxlib>=0.4.33' || '' }} --override .github/sibling-pins.txt ruff==0.17.3 deptry ty==0.0.96
+          uv pip install --python .venv/bin/python -e ".[${{ matrix.backend == 'jax' && 'test-jax' || 'test' }}]" --override .github/sibling-pins.txt ruff==0.17.3 deptry ty==0.0.96
 
       # NumPy consumers must not inherit JAX through the test extra.
       - name: Prove the core install carries no jax
@@ -147,7 +147,7 @@ jobs:
           uv venv .venv --python 3.12
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
           # One resolve, so pinned siblings satisfy the package floors.
-          uv pip install --python .venv/bin/python -e ".[docs,test,jax]" --override .github/sibling-pins.txt
+          uv pip install --python .venv/bin/python -e ".[docs,test-jax]" --override .github/sibling-pins.txt
 
       # Every Python fence in README.md and docs runs as a test. A block that cannot run on a
       # runner carries the info string `python notest` and a one-line reason above it.
@@ -195,7 +195,7 @@ jobs:
           uv venv .venv --python 3.12
           echo "$PWD/.venv/bin" >> "$GITHUB_PATH"
           # One resolve, so pinned siblings satisfy the package floors.
-          uv pip install --python .venv/bin/python -e ".[test]" jax jaxlib --override .github/sibling-pins.txt
+          uv pip install --python .venv/bin/python -e ".[test-jax]" --override .github/sibling-pins.txt
 
       - name: Slow tier (hypothesis nightly profile)
         env:

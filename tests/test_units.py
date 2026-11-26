@@ -51,16 +51,25 @@ def test_photon_ratio_factor():
 
 
 def test_backend_parity():
+    """Compare to host float64 at the working precision of the conversions.
+
+    Two roundings in -0.4*m are amplified by abs(0.4*m*ln(10)) in the
+    power, plus one for the power. The other paths count input conversions,
+    products, quotients, and the AB logarithm.
+    """
     jnp = pytest.importorskip("jax.numpy")
+    from hwoutils.numerics import eps
+
     mag = np.array([18.0, 22.0, 23.0])
     lam = np.array([500.0, 1250.0, 550.0])
-    for fn, args in [
-        (units.mag_to_flux_ratio, (mag,)),
-        (units.ab_mag_arcsec2_from_intensity, (np.array([1e-7, 1e-8, 1e-6]), lam)),
-        (units.intensity_to_mjy_per_sr, (np.array([1e-7, 1e-8, 1e-6]), lam / 1000)),
-        (units.power_to_photon_intensity, (np.array([1e-7, 1e-8, 1e-6]), lam)),
+    intensity = np.array([1e-7, 1e-8, 1e-6])
+    power_bound = 1 + 2 * 0.4 * mag.max() * np.log(10)
+    for fn, args, bound in [
+        (units.mag_to_flux_ratio, (mag,), power_bound),
+        (units.ab_mag_arcsec2_from_intensity, (intensity, lam), 12),
+        (units.intensity_to_mjy_per_sr, (intensity, lam / 1000), 6),
+        (units.power_to_photon_intensity, (intensity, lam), 5),
     ]:
         a = fn(*args)
         b = fn(*(jnp.asarray(x) for x in args))
-        # a few ULPs of round-off from transcendental ops and fma fusion
-        np.testing.assert_allclose(np.asarray(a), np.asarray(b), rtol=1e-13, atol=0.0)
+        np.testing.assert_allclose(b, a, rtol=bound * eps(b.dtype), atol=0)

@@ -19,7 +19,7 @@ Numbers below are from 2026-07 on linux x86-64, float64, unless noted.
 
 | Gate | Evidence kind | What it checks | How | Result |
 |---|---|---|---|---|
-| Backend parity | code verification | numpy = JAX through jit/vmap, grad vs finite differences, for every public function | unit suite (`tests/`) | exact for gather/arithmetic paths; within a few ULPs (rtol 1e-13) where transcendentals / fma fusion apply |
+| Backend parity | code verification | numpy = JAX through jit/vmap, grad vs finite differences, for every public function | unit suite (`tests/`) | exact at represented knots; arithmetic bounds follow the working dtype, operation count, and conditioning |
 | Table data | code verification (data transcription) | tables match the published values | pinned spot values in `tests/test_tables.py` | pass |
 | skyscapes reproduction | cross-code benchmark | `anchor="table19"` reproduces `skyscapes.LeinertZodi` radiance and AB magnitudes | `scripts/validate_against_skyscapes.py`, 504-point grid | max rel radiance diff 2.5e-15; max mag diff 1.1e-14 |
 | EXOSIMS conventions | cross-code benchmark | closed-form models and magnitude chain match the EXOSIMS prototype | `scripts/validate_against_exosims.py` | Lindler2006, Stark2014, `calc_JEZ0` chain: exact (0.0). Interpolation-flavor deltas: Table 17 position max 1.35 percent (bilinear vs triangulated); Table 19 color exact at knots, -4.6 percent at 550 nm, max +10.5 percent at 2.5 um (linear vs quadratic spline); latitudinal profile max 2.3 percent (linear vs cubic) |

@@ -25,10 +25,11 @@ uniforms.
 Every function runs on numpy or JAX arrays from one source
 (`zodi._xp`): numpy inputs run pure numpy, JAX inputs trace natively
 (jit/vmap/grad), and numpy arrays act as backend-neutral static data
-when mixed with JAX inputs. Cross-backend agreement is exact for
-arithmetic and gather operations and within a few ULPs (relative
-1e-13) where transcendental functions or fused multiply-adds are
-involved. JAX users should enable float64.
+when mixed with JAX inputs. Forward-model tests compare both working
+precisions against float64. Interpolation at table knots reproduces the stored ordinate
+exactly. Between knots the roundoff bound depends on the ordinate scale,
+and log-space spectral interpolation also accounts for the sensitivity
+of the exponential. Calibration and published reference values use float64.
 
 ## 2. Local zodiacal light
 
@@ -207,6 +208,14 @@ wavelength dependence (Table 19) with the Sun as $F_*$. Then
 $f_\lambda$ is the ratio of throughput-weighted bandpass averages
 between the observing band and V
 (evaluate `zodi.grey_scatter_intensity` and average over each bandpass).
+
+For `blackbody_spectral_radiance`, the float32 CPU check covers a 31 by 13
+log-spaced grid from 0.3 to 30 um and 100 to 6000 K. All 375 values in the
+normal float32 range remain positive. The largest relative difference from
+the float64 SI Planck law was 1.30e-5 for NumPy and 1.39e-5 for JAX, eager
+and JIT. The tolerance at each wavelength and temperature scales with the
+Planck exponent through $x/(1-\exp(-x))$. Below the smallest normal
+float32 radiance a backend can return zero.
 
 Because the model is linear in the two constants, the calibration is a
 closed-form least-squares solve

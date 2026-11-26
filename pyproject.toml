@@ -35,6 +35,8 @@ test = [
     "pytest-timeout>=1.3.1",
     "pytest-fail-slow>=0.1.0",
 ]
+# Precision assertions in hwoutils.testing require its JAX/Equinox stack.
+test-jax = ["zodi[test]", "equinox>=0.13.2", "jax>=0.8.1"]
 docs = [
     "sphinx>=7.2",
     "myst-nb>=1.0",
@@ -79,13 +81,14 @@ slow_s = 300
 
 [tool.deptry]
 known_first_party = ["zodi"]
-optional_dependencies_dev_groups = ["dev", "docs", "test"]
+optional_dependencies_dev_groups = ["dev", "docs", "test", "test-jax"]
 
 [tool.deptry.per_rule_ignores]
 # jax is an optional import: zodi registers pytree nodes only when the user has installed it,
-# so it is deliberately not declared (missing in the numpy leg, transitive in the jax leg).
+# so it is required only by the JAX test extra.
 DEP001 = ["jax"]
 DEP003 = ["jax"]
+DEP004 = ["jax"]
 
 [tool.ty.environment]
 python-version = "3.11"
