@@ -1,7 +1,5 @@
 """Precision contract at the Skyscapes local-zodi seam."""
 
-import re
-
 import numpy as np
 import pytest
 import skyscapes
@@ -11,26 +9,9 @@ from optixstuff.spectral import Band, Quadrature
 from orbix.system import SkyFrame
 
 
-class _OrbixObliquityWidening(AssertionError):
-    """The confirmed upstream float64 obliquity rotation."""
-
-
 @pytest.mark.float64_only(reason="trace float32 consumers in the x64 lane")
 @pytest.mark.parametrize("read", ["point", "node"])
-@pytest.mark.parametrize(
-    "model_name",
-    [
-        "AYOZodi",
-        pytest.param(
-            "LeinertZodi",
-            marks=pytest.mark.xfail(
-                strict=True,
-                raises=_OrbixObliquityWidening,
-                reason="Orbix equat2eclip creates a float64 obliquity rotation",
-            ),
-        ),
-    ],
-)
+@pytest.mark.parametrize("model_name", ["AYOZodi", "LeinertZodi"])
 def test_skyscapes_local_zodi_forward_precision(model_name, read):
     """Fails if the consumer's point or quadrature-node read widens.
 
@@ -57,13 +38,4 @@ def test_skyscapes_local_zodi_forward_precision(model_name, read):
     spectrum_ops = int(np.ceil(np.log(10.0) * (6 * 6 + 5 * 0.4 * 2)))
     bound = float(ulps(2 * spectrum_ops + 80, np.float32(1)))
     precision_pair(radiance, wide, bound=bound, scale=0)
-    try:
-        assert_precision_closed(radiance, *canonical(wide, precision="float32"))
-    except AssertionError as error:
-        if model_name == "LeinertZodi" and re.search(
-            r"(?:^|/)orbix/observatory/solar_system\.py:76:\d+ \(equat2eclip\): "
-            r"precision widened to float64$",
-            str(error),
-        ):
-            raise _OrbixObliquityWidening(str(error)) from error
-        raise
+    assert_precision_closed(radiance, *canonical(wide, precision="float32"))
