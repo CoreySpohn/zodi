@@ -1,5 +1,23 @@
 # Changelog
 
+## [3.0.0](https://github.com/CoreySpohn/zodi/compare/v2.0.0...v3.0.0) (2026-11-28)
+
+
+### ⚠ BREAKING CHANGES
+
+* **zodi:** close zodiacal and exozodi reads at their working precision
+* remove zodi.jax and the jax extra, the equinox models now live in skyscapes
+
+### Features
+
+* remove zodi.jax and the jax extra, the equinox models now live in skyscapes ([3560dad](https://github.com/CoreySpohn/zodi/commit/3560dad702fa2ffb1546c94243cdf00dbcfd505a))
+
+
+### Bug Fixes
+
+* **zodi:** close zodiacal and exozodi reads at their working precision ([64499b6](https://github.com/CoreySpohn/zodi/commit/64499b6bfc1aac4069a2fdbca3e3ed0fff640d99))
+* **zodi:** decide the grey-scatter cutoff on the host wavelength before narrowing ([e603d5b](https://github.com/CoreySpohn/zodi/commit/e603d5b3eedabb09a3870634d2efe93a59c073c1))
+
 ## [2.0.0](https://github.com/CoreySpohn/zodi/compare/v1.1.0...v2.0.0) (2026-11-19)
 
 
